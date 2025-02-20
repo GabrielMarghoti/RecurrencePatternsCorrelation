@@ -1,0 +1,44 @@
+# Ignore data and figures folders
+/data/
+/figures/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS-specific files
+.DS_Store
+
+# Windows-specific files
+Thumbs.db
