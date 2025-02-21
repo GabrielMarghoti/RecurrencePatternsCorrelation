@@ -1,2 +1,2 @@
-# rpmotifs
+# RPMotifs
 Recurrence Plots motifs analysis.
