@@ -29,9 +29,9 @@ end
 # Autoregressive (AR) model
 function generate_ar_trajectory(a, Nf)
     trajectory = zeros(Nf)
-    trajectory[1] = randn()  # Initial condition
+    trajectory[1] = 0.1*randn()  # Initial condition
     for t in 2:Nf
-        trajectory[t] = a * trajectory[t-1] + randn()
+        trajectory[t] = a * trajectory[t-1] + 0.1 * randn()
     end
     return trajectory
 end
@@ -118,14 +118,21 @@ function plot_motifs_transition_times(probabilities, LMAX; log_scale=true, figur
         probabilities = log.(probabilities .+ 1e-10)
     end
 
+    Xticks_nume = [-LMAX[1]:2:-2; 0 ; 2:2:LMAX[1]]
+    Xticks_name = ["i".*string.(-LMAX[1]:2:-2); "i" ;"i+".*string.(2:2:LMAX[1])]
+    Yticks_nume = [-LMAX[2]:2:-2; 0 ; 2:2:LMAX[2]]
+    Yticks_name = ["j".*string.(-LMAX[2]:2:-2); "j" ;"j+".*string.(2:2:LMAX[2])]
+
     # Plot transition times matrix
     for motif_idx in 1:2^2
-        trans_matrix_plot = heatmap(1:LMAX[1], 1:LMAX[2], 
+        R00, Rij = divrem(motif_idx - 1, 2)
+
+        trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
                                     probabilities[:, :, motif_idx], 
-                                    aspect_ratio = 1, c = :viridis, xlabel = "i'", ylabel = "j'", 
-                                    title = "P[R(i,j)=$(string(motif_idx-1, base=2)[end]) ∩ R(i+i',j+j')=$(string(motif_idx-1, base=2)[1])]", colorbar_title = "Probability", 
-                                    xticks = (1:5:LMAX[1], "i+".*string.(1:5:LMAX[1])), yticks = (1:5:LMAX[2], "j+".*string.(1:5:LMAX[2])),
-                                    size = (800, 800), dpi=300, grid = false, transpose = true)
+                                    aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
+                                    title = "P[R(i,j)= $(R00) ∩ R(i+i',j+j')=$(Rij)]", colorbar_title = "Probability", 
+                                    xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, widen=false)
         savefig(trans_matrix_plot, "$figures_path/log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
     end
 end
@@ -134,10 +141,10 @@ end
 function main()
     # Parameters
     Nf = 2000
-    Δt = 0.05
+    Δt = 0.1
     LMAX = (30,30)
     resolution = 32
-    rrs = [0.05; 0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
+    rrs = [0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
     
     # 3D autoregressive model connection matrix
     A = [0.1  0.2  0.05;
@@ -146,11 +153,12 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Logistic 1D", nothing, 3.6, 1),
-        ("Logistic 3D", nothing, [3.6, 0.1], 1),
+        ("Logistic 1D", nothing, 4.0, 1),
+        #("Logistic 3D", nothing, [3.6, 0.1], 1),
         ("Randn", nothing, nothing, 1),
-        ("AR 0.1", nothing, 0.1, 1),
-        ("3D AR 0.1", nothing, A, 1),
+        ("AR 0.2", nothing, 0.1, 1),
+        ("AR 0.9", nothing, 0.5, 1),
+        #("3D AR 0.1", nothing, A, 1),
         ("Lorenz (x)", lorenz!, [10.0, 28.0, 8 / 3], 1),
         ("Lorenz (z)", lorenz!, [10.0, 28.0, 8 / 3], 3),
         ("Rossler (x)", rossler!, [0.2, 0.2, 5.7], 1),
@@ -165,7 +173,7 @@ function main()
     mkpath(figures_path)
     
     # Adjust array to store results for each system and component
-    probabilities = zeros(length(systems), resolution, LMAX[1], LMAX[2], 2*2)  # Extra dimension for components
+    probabilities = zeros(length(systems), resolution, 2*LMAX[1]+1, 2*LMAX[2]+1, 2*2)  # Extra dimension for components
     
     for (i, system_tuple) in enumerate(systems)
         system_name, system, params, component = system_tuple
@@ -199,17 +207,22 @@ function main()
             trajectory = analyze_system(system, params, Nf, Δt)  # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         end
-        
+
+        # Plot and save the time series
+        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
+        savefig("$figures_path/$system_name.png")
+
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
             RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
-            for iprime in ProgressBar(1:LMAX[1])
-                for jprime in 1:LMAX[2]
+            for (i_idx,iprime) in enumerate(ProgressBar(-LMAX[1]:LMAX[1]))
+                for (j_idx, jprime) in enumerate(-LMAX[2]:LMAX[2])
                     L = (iprime, jprime)
-                    probabilities[i, idx, iprime, jprime, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, num_samples=0.1)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, num_samples=0.1)
                 end
             end
             plot_motifs_transition_times(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_times(probabilities[i, idx, :, :, :], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
     end
 end
