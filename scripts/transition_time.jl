@@ -1,6 +1,7 @@
 # transition_time.jl
 
 using DynamicalSystems
+using DifferentialEquations
 using RecurrenceAnalysis
 using Plots
 using Measures
@@ -110,42 +111,43 @@ function analyze_system(system, params, Nf, Δt)
     return trajectory
 end
 
-function plot_motifs_transition_times(probabilities, LMAX, log_scale=True, figures_path)
-        
-        mkpath(figures_path)
+function plot_motifs_transition_times(probabilities, LMAX; log_scale=true, figures_path=".")
+    mkpath(figures_path)
 
-        # Plot transition times matrix
-        for motif_idx=1:2^2
+    if log_scale
+        probabilities = log.(probabilities .+ 1e-10)
+    end
+
+    # Plot transition times matrix
+    for motif_idx in 1:2^2
         trans_matrix_plot = heatmap(1:LMAX[1], 1:LMAX[2], 
-                            probabilities[:, :, motif_idx]', 
-                            aspect_ratio = 1, c = :viridis, xlabel = "i'", ylabel = "j'", 
-                            title = "Transition Times Matrix", colorbar_title = "Probability", 
-                            xticks = (1:5:LMAX[1], 'i'.*string.(1:5:LMAX[1])), yticks = (1:5:LMAX[2], 'j'.*string.(1:5:LMAX[2])),
-                            size = (800, 800), dpi=300, grid = false,
-                            yscale = log_scale ? :log10 : :linear , minorgrid = false, ylims = (1e-8, 1.01))
-        savefig(trans_matrix_plot, "$figures_path/log_$(log_scale)-all_systems_motif_$(string(motif_idx-1, base=2)).png")
- 
-        end
+                                    probabilities[:, :, motif_idx], 
+                                    aspect_ratio = 1, c = :viridis, xlabel = "i'", ylabel = "j'", 
+                                    title = "P[R(i,j)=$(string(motif_idx-1, base=2)[end]) ∩ R(i+i',j+j')=$(string(motif_idx-1, base=2)[1])]", colorbar_title = "Probability", 
+                                    xticks = (1:5:LMAX[1], "i+".*string.(1:5:LMAX[1])), yticks = (1:5:LMAX[2], "j+".*string.(1:5:LMAX[2])),
+                                    size = (800, 800), dpi=300, grid = false, transpose = true)
+        savefig(trans_matrix_plot, "$figures_path/log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+    end
 end
 
 
 function main()
     # Parameters
-    Nf = 1000
+    Nf = 2000
     Δt = 0.05
-    LMAX = (100,100)
+    LMAX = (30,30)
     resolution = 32
-    rrs = [0.01; 0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
+    rrs = [0.05; 0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
     
     # 3D autoregressive model connection matrix
-    A = [0.0  0.0  0.0;
-         0.0  0.0  0.0;
-         0.0  0.0  0.0]
+    A = [0.1  0.2  0.05;
+         0.1  0.1  0.0;
+         0.0  0.0  0.1]
     
     # Systems to analyze
     systems = [
         ("Logistic 1D", nothing, 3.6, 1),
-        ("Logistic 3D", nothing, [3.7, 0.1], 1),
+        ("Logistic 3D", nothing, [3.6, 0.1], 1),
         ("Randn", nothing, nothing, 1),
         ("AR 0.1", nothing, 0.1, 1),
         ("3D AR 0.1", nothing, A, 1),
@@ -200,15 +202,14 @@ function main()
         
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
-            RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rr); metric = Euclidean(), parallel = true)
-            for iprime in 1:LMAX[1]
+            RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
+            for iprime in ProgressBar(1:LMAX[1])
                 for jprime in 1:LMAX[2]
                     L = (iprime, jprime)
-                    rr = rrs[idx]
-                    probabilities[i, idx, iprime, jprime, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:full, num_samples=1.0)
+                    probabilities[i, idx, iprime, jprime, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, num_samples=0.1)
                 end
             end
-            plot_motifs_transition_times(probabilities[i, idx, :, :, :], systems, LMAX, figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_times(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
     end
 end
