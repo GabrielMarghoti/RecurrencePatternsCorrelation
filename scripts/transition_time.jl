@@ -29,9 +29,9 @@ end
 # Autoregressive (AR) model
 function generate_ar_trajectory(a, Nf)
     trajectory = zeros(Nf)
-    trajectory[1] = 0.1*randn()  # Initial condition
+    trajectory[1] = 0.01*randn()  # Initial condition
     for t in 2:Nf
-        trajectory[t] = a * trajectory[t-1] + 0.1 * randn()
+        trajectory[t] = a * trajectory[t-1] + 0.01 * randn()
     end
     return trajectory
 end
@@ -105,18 +105,15 @@ end
 
 
 # Analyze a dynamical system
-function analyze_system(system, params, Nf, Δt)
-    problem = ODEProblem(system, 2 * rand(3), (0.0, round(Int, 2 * Nf * Δt)), params)
+function analyze_system(system, params, Nf)
+    Δt =  params[2]
+    problem = ODEProblem(system, 2 * rand(3), (0.0, round(Int, 2 * Nf * params[2])), params[1])
     trajectory = Matrix(solve(problem, Tsit5(), dt = Δt, saveat = Δt, reltol = 1e-9, abstol = 1e-9, maxiters = 1e7)[:, end - Nf:end]')
     return trajectory
 end
 
-function plot_motifs_transition_times(probabilities, LMAX; log_scale=true, figures_path=".")
+function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=true, figures_path=".")
     mkpath(figures_path)
-
-    if log_scale
-        probabilities = log.(probabilities .+ 1e-10)
-    end
 
     Xticks_nume = [-LMAX[1]:2:-2; 0 ; 2:2:LMAX[1]]
     Xticks_name = ["i".*string.(-LMAX[1]:2:-2); "i" ;"i+".*string.(2:2:LMAX[1])]
@@ -125,24 +122,54 @@ function plot_motifs_transition_times(probabilities, LMAX; log_scale=true, figur
 
     # Plot transition times matrix
     for motif_idx in 1:2^2
-        R00, Rij = divrem(motif_idx - 1, 2)
+        Rij, R00 = divrem(motif_idx - 1, 2)
+        
+        probabilities_motif = R00==1 ? probabilities[:, :, motif_idx]/rr : probabilities[:, :, motif_idx]/(1-rr)
+        if log_scale
+            probabilities_motif = log.(probabilities_motif .+ 1e-10)
+        end
+    
+        trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
+                                    probabilities_motif, 
+                                    aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
+                                    title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
+                                    xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, widen=false)
+        savefig(trans_matrix_plot, "$figures_path/joint_P_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+    end
+end
 
+function plot_motifs_transition_cond_prob(joint_probabilities, isolated_probabilities, LMAX; log_scale=true, figures_path=".")
+    mkpath(figures_path)
+
+    Xticks_nume = [-LMAX[1]:2:-2; 0 ; 2:2:LMAX[1]]
+    Xticks_name = ["i".*string.(-LMAX[1]:2:-2); "i" ;"i+".*string.(2:2:LMAX[1])]
+    Yticks_nume = [-LMAX[2]:2:-2; 0 ; 2:2:LMAX[2]]
+    Yticks_name = ["j".*string.(-LMAX[2]:2:-2); "j" ;"j+".*string.(2:2:LMAX[2])]
+
+    # Plot transition times matrix
+    for motif_idx in 1:2^2
+        Rij, R00 = divrem(motif_idx - 1, 2)
+
+        if log_scale
+            probabilities = log.(probabilities .+ 1e-10)
+        end
+    
         trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
                                     probabilities[:, :, motif_idx], 
                                     aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
-                                    title = "P[R(i,j)= $(R00) ∩ R(i+i',j+j')=$(Rij)]", colorbar_title = "Probability", 
+                                    title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
                                     xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
                                     size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, widen=false)
-        savefig(trans_matrix_plot, "$figures_path/log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+        savefig(trans_matrix_plot, "$figures_path/conditional_P_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
     end
 end
 
 
 function main()
     # Parameters
-    Nf = 2000
-    Δt = 0.1
-    LMAX = (30,30)
+    Nf = 3000
+    LMAX = (40,40)
     resolution = 32
     rrs = [0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
     
@@ -153,15 +180,19 @@ function main()
     
     # Systems to analyze
     systems = [
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
         ("Logistic 1D", nothing, 4.0, 1),
         #("Logistic 3D", nothing, [3.6, 0.1], 1),
         ("Randn", nothing, nothing, 1),
-        ("AR 0.2", nothing, 0.1, 1),
-        ("AR 0.9", nothing, 0.5, 1),
+        ("AR 0.1", nothing, 0.1, 1),
+        ("AR 0.3", nothing, 0.3, 1),
+        ("AR 0.8", nothing, 0.8, 1),
+        ("AR 0.9", nothing, 0.9, 1),
         #("3D AR 0.1", nothing, A, 1),
-        ("Lorenz (x)", lorenz!, [10.0, 28.0, 8 / 3], 1),
-        ("Lorenz (z)", lorenz!, [10.0, 28.0, 8 / 3], 3),
-        ("Rossler (x)", rossler!, [0.2, 0.2, 5.7], 1),
+        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 2.0], [1,2,3]),
+        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 2.0], 1),
         ("Circle (sine)", nothing, 0.01, 1)
     ]
     
@@ -204,7 +235,7 @@ function main()
             time_series = trajectory[:, component]
         
         else
-            trajectory = analyze_system(system, params, Nf, Δt)  # Generate system trajectory
+            trajectory = analyze_system(system, params, Nf)  # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         end
 
@@ -218,11 +249,13 @@ function main()
             for (i_idx,iprime) in enumerate(ProgressBar(-LMAX[1]:LMAX[1]))
                 for (j_idx, jprime) in enumerate(-LMAX[2]:LMAX[2])
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, num_samples=0.1)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.02)
                 end
             end
-            plot_motifs_transition_times(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
-            plot_motifs_transition_times(probabilities[i, idx, :, :, :], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+           
+            #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
     end
 end
