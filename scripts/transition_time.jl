@@ -168,15 +168,15 @@ end
 
 function main()
     # Parameters
-    Nf = 3000
-    LMAX = (40,40)
+    Nf = 2300
+    LMAX = (30,30)
     resolution = 32
     rrs = [0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
     
     # 3D autoregressive model connection matrix
-    A = [0.1  0.2  0.05;
-         0.1  0.1  0.0;
-         0.0  0.0  0.1]
+    A = [0.15  0.2  0.05;
+         0.1  0.2  0.1;
+         0.05  0.15  0.2]
     
     # Systems to analyze
     systems = [
@@ -184,16 +184,16 @@ function main()
         ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
         ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
         ("Logistic 1D", nothing, 4.0, 1),
-        #("Logistic 3D", nothing, [3.6, 0.1], 1),
+        ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
         ("AR 0.1", nothing, 0.1, 1),
         ("AR 0.3", nothing, 0.3, 1),
         ("AR 0.8", nothing, 0.8, 1),
         ("AR 0.9", nothing, 0.9, 1),
-        #("3D AR 0.1", nothing, A, 1),
+        ("3D AR 0.4", nothing, A, 1),
         ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 2.0], [1,2,3]),
         ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 2.0], 1),
-        ("Circle (sine)", nothing, 0.01, 1)
+        ("Circle (sine)", nothing, 0.1, 1)
     ]
     
     # Output directories
