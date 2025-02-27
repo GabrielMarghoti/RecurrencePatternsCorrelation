@@ -169,7 +169,7 @@ end
 function main()
     # Parameters
     Nf = 2000
-    LMAX = (100,100)
+    LMAX = (60,60)
     resolution = 32
     rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
     
@@ -180,10 +180,9 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
-        ("Lorenz traj add noise", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
-        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
-        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
         ("Logistic 1D", nothing, 4.0, 1),
         ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
@@ -192,14 +191,14 @@ function main()
         ("AR 0.8", nothing, 0.8, 1),
         ("AR 0.9", nothing, 0.9, 1),
         ("3D AR 0.4", nothing, A, 1),
-        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1.0], [1,2,3]),
-        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1.0], 1),
+        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
+        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 0.5], 1),
         ("Circle (sine)", nothing, 0.11347, 1)
     ]
     
     # Output directories
-    data_path    = "data/motifs_transition_times_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/motifs_transition_times_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/motifs_transition_times_local_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/motifs_transition_times_local_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -239,14 +238,10 @@ function main()
             trajectory = analyze_system(system, params, Nf)  # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         end
-        if occursin("add noise", system_name)
-            time_series += 10*randn(size(time_series))
-        end
-        
 
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
-            RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
+            RP = RecurrenceMatrix(StateSpaceSet(time_series), LocalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
 
             for (i_idx,iprime) in enumerate(ProgressBar(-LMAX[1]:LMAX[1]))
                 Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
