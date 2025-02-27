@@ -168,7 +168,7 @@ end
 
 function main()
     # Parameters
-    Nf = 10000
+    Nf = 5000
     LMAX = (10,10)
     resolution = 32
     rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
@@ -182,8 +182,8 @@ function main()
     systems = [
         ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
         ("Lorenz traj add noise", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
-        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
-        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
         ("Logistic 1D", nothing, 4.0, 1),
         ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),

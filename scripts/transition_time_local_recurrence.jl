@@ -168,8 +168,8 @@ end
 
 function main()
     # Parameters
-    Nf = 2000
-    LMAX = (60,60)
+    Nf = 1400
+    LMAX = (200,200)
     resolution = 32
     rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
     
@@ -184,15 +184,15 @@ function main()
         ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
         ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
         ("Logistic 1D", nothing, 4.0, 1),
-        ("Logistic 3D", nothing, [3.711, 0.06], 1),
+       # ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
         ("AR 0.1", nothing, 0.1, 1),
-        ("AR 0.3", nothing, 0.3, 1),
-        ("AR 0.8", nothing, 0.8, 1),
+       # ("AR 0.3", nothing, 0.3, 1),
+       # ("AR 0.8", nothing, 0.8, 1),
         ("AR 0.9", nothing, 0.9, 1),
-        ("3D AR 0.4", nothing, A, 1),
-        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
-        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 0.5], 1),
+       # ("3D AR 0.4", nothing, A, 1),
+        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1], [1,2,3]),
+        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1], 1),
         ("Circle (sine)", nothing, 0.11347, 1)
     ]
     
@@ -210,6 +210,9 @@ function main()
         system_name, system, params, component = system_tuple
         
         println("Analyzing $system_name system...")
+
+        system_path = figures_path*"/$system_name$(params)"
+        mkpath(system_path)
         
         # Generate trajectory
         if system_name == "Randn"
@@ -239,6 +242,10 @@ function main()
             time_series = trajectory[:, component]  # Extract component
         end
 
+        # Plot and save the time series
+        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
+        savefig(system_path*"/time_series.png")
+
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
             RP = RecurrenceMatrix(StateSpaceSet(time_series), LocalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
@@ -247,22 +254,19 @@ function main()
                 Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
                     jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.01)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.05)
                 end
             end
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])")
            
             # Plot and save the recurrence plot
             heatmap(RP, title = "$system_name Recurrence Plot", xlabel="Time", ylabel="Time",
             c=:grays, colorbar_title="Recurrence", size=(800, 600), dpi=200,
             colorbar=false, frame_style=:box, aspect_ratio=1, widen=false)
-            savefig(figures_path*"/$system_name/rr$(rrs[idx])/$(system_name)_recurrence_plot.png")
+            savefig(system_path*"/rr$(rrs[idx])/recurrence_plot.png")
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
-        # Plot and save the time series
-        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
-        savefig(figures_path*"/$system_name/$system_name.png")
     end
 end
 
