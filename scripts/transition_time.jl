@@ -168,8 +168,8 @@ end
 
 function main()
     # Parameters
-    Nf = 2300
-    LMAX = (30,30)
+    Nf = 2000
+    LMAX = (100,100)
     resolution = 32
     rrs = [0.1; 0.2; 0.5] # 10 .^ range(-4, -0.01, resolution)
     
@@ -180,9 +180,9 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
-        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
-        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
         ("Logistic 1D", nothing, 4.0, 1),
         ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
@@ -191,8 +191,8 @@ function main()
         ("AR 0.8", nothing, 0.8, 1),
         ("AR 0.9", nothing, 0.9, 1),
         ("3D AR 0.4", nothing, A, 1),
-        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 2.0], [1,2,3]),
-        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 2.0], 1),
+        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
+        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 0.5], 1),
         ("Circle (sine)", nothing, 0.1, 1)
     ]
     
@@ -246,15 +246,22 @@ function main()
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
             RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
+
             for (i_idx,iprime) in enumerate(ProgressBar(-LMAX[1]:LMAX[1]))
-                for (j_idx, jprime) in enumerate(-LMAX[2]:LMAX[2])
+                Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
+                    jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.02)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.01)
                 end
             end
             plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
             plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
            
+            # Plot and save the recurrence plot
+            heatmap(RP, title = "$system_name Recurrence Plot", xlabel="Time", ylabel="Time",
+            c=:grays, colorbar_title="Recurrence", size=(800, 600), dpi=200,
+            colorbar=false, frame_style=:box, aspect_ratio=1, widen=false)
+            savefig(figures_path*"/$system_name/rr$(rrs[idx])/$(system_name)_recurrence_plot.png")
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
     end
