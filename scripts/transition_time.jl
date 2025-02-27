@@ -168,8 +168,8 @@ end
 
 function main()
     # Parameters
-    Nf = 2000
-    LMAX = (100,100)
+    Nf = 10000
+    LMAX = (10,10)
     resolution = 32
     rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
     
@@ -180,8 +180,8 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
-        ("Lorenz traj add noise", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
+        ("Lorenz traj add noise", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
         ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
         ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
         ("Logistic 1D", nothing, 4.0, 1),
@@ -252,7 +252,7 @@ function main()
                 Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
                     jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.01)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.1)
                 end
             end
             plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
