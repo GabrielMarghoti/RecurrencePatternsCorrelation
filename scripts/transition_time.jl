@@ -7,8 +7,44 @@ using Plots
 using Measures
 using ProgressBars
 using Dates
+using Random, Distributions, ARCHModels
 
+function generate_garch(N, ω, α, β)
+    p = length(β)  # GARCH memory
+    q = length(α)  # ARCH memory
+    max_lag = max(p, q)
+    
+    ε = zeros(N)
+    σ² = zeros(N)
+    
+    # Initialize with small noise
+    for t in 1:max_lag
+        ε[t] = randn()
+        σ²[t] = ω / (1 - sum(β))  # Stationary variance assumption
+    end
+    
+    # GARCH recursion
+    for t in (max_lag + 1):N
+        σ²[t] = ω + sum(α .* ε[t .- (1:q)].^2) + sum(β .* σ²[t .- (1:p)])
+        ε[t] = sqrt(σ²[t]) * randn()
+    end
+    
+    return ε
+end
 
+# General AR(p) Model
+function generate_ar(n::Int, coeffs::Vector{Float64}, sigma::Float64; seed=42)
+    Random.seed!(seed)
+    p = length(coeffs)  # Order of AR process
+    x = zeros(n)
+    x[1:p] = rand(Normal(0, sigma), p)  # Initialize with random values
+    
+    for t in (p + 1):n
+        x[t] = sum(coeffs .* x[t-p:t-1]) + rand(Normal(0, sigma))
+    end
+    
+    return x
+end
 # Lorenz system
 function lorenz!(du, u, p, t)
     σ, ρ, β = p
@@ -134,6 +170,7 @@ function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=tr
                                     aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
                                     title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
                                     xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    zlims = log_scale == true ? (-8,0) : (0,1),
                                     size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, widen=false)
         savefig(trans_matrix_plot, "$figures_path/joint_P_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
     end
@@ -168,8 +205,8 @@ end
 
 function main()
     # Parameters
-    Nf = 5000
-    LMAX = (10,10)
+    Nf = 1500
+    LMAX = (80,80)
     resolution = 32
     rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
     
@@ -180,26 +217,31 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
-        ("Lorenz traj add noise", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
-        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
-        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
+        ("GARCH", nothing, 
+        [0.01,
+        [0.1, 0.05],  # ARCH(2)
+        [0.7, 0.2, 0.05]]  # GARCH(3)
+        , 1),  # ω, α, β
+        ("AR(2)", nothing, [[0.7, -0.2], 0.5], 1),  # AR(2) with noise variance
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
         ("Logistic 1D", nothing, 4.0, 1),
-        ("Logistic 3D", nothing, [3.711, 0.06], 1),
+       # ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
         ("AR 0.1", nothing, 0.1, 1),
-        ("AR 0.3", nothing, 0.3, 1),
-        ("AR 0.8", nothing, 0.8, 1),
+       # ("AR 0.3", nothing, 0.3, 1),
+       # ("AR 0.8", nothing, 0.8, 1),
         ("AR 0.9", nothing, 0.9, 1),
-        ("3D AR 0.4", nothing, A, 1),
-        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1.0], [1,2,3]),
-        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1.0], 1),
+       # ("3D AR 0.4", nothing, A, 1),
+        ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1], [1,2,3]),
+        ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1], 1),
         ("Circle (sine)", nothing, 0.11347, 1)
     ]
     
     # Output directories
-    data_path    = "data/motifs_transition_times_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/motifs_transition_times_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/motifs_transition_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/motifs_transition_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -211,12 +253,15 @@ function main()
         system_name, system, params, component = system_tuple
         
         println("Analyzing $system_name system...")
+
+        system_path = figures_path*"/$system_name$(params)"
+        mkpath(system_path)
         
         # Generate trajectory
         if system_name == "Randn"
             time_series = randn(Nf)
         
-        elseif startswith(system_name, "AR")
+        elseif startswith(system_name, "AR 0.")
             time_series = generate_ar_trajectory(params, Nf)
         
         elseif occursin("3D AR", system_name)
@@ -235,14 +280,20 @@ function main()
             trajectory  = [sin.(2π * params * range(1, Nf)) cos.(2π * params * range(1, Nf))]
             time_series = trajectory[:, component]
         
+        elseif system_name == "GARCH"
+            time_series = generate_garch(Nf, params...)
+
+        elseif system_name == "AR(2)"
+            time_series = generate_ar(Nf, params[1], params[2])
+
         else
             trajectory = analyze_system(system, params, Nf)  # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         end
-        if occursin("add noise", system_name)
-            time_series += 10*randn(size(time_series))
-        end
-        
+
+        # Plot and save the time series
+        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
+        savefig(system_path*"/time_series.png")
 
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
@@ -252,22 +303,19 @@ function main()
                 Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
                     jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.1)
+                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.05)
                 end
             end
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])")
+            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])")
            
             # Plot and save the recurrence plot
             heatmap(RP, title = "$system_name Recurrence Plot", xlabel="Time", ylabel="Time",
             c=:grays, colorbar_title="Recurrence", size=(800, 600), dpi=200,
             colorbar=false, frame_style=:box, aspect_ratio=1, widen=false)
-            savefig(figures_path*"/$system_name/rr$(rrs[idx])/$(system_name)_recurrence_plot.png")
+            savefig(system_path*"/rr$(rrs[idx])/recurrence_plot.png")
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
-        # Plot and save the time series
-        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
-        savefig(figures_path*"/$system_name/$system_name.png")
     end
 end
 

@@ -134,6 +134,7 @@ function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=tr
                                     aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
                                     title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
                                     xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    zlims = log_scale == true ? (-8,0) : (0,1),
                                     size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, widen=false)
         savefig(trans_matrix_plot, "$figures_path/joint_P_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
     end
@@ -180,9 +181,9 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], [1,2,3]),
-        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 1),
-        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.1], 3),
+        ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
+        ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
+        ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
         ("Logistic 1D", nothing, 4.0, 1),
        # ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
