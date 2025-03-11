@@ -413,7 +413,7 @@ function main()
     ]
 
     # Output directory
-    base_output_dir = "motif_2x2_analysis_$(today())/resol$(resolution)_Nf$(Nf)_L$(L)_mMax$(m_max)"
+    base_output_dir = "figures/motif_2x2_analysis_$(today())/resol$(resolution)_Nf$(Nf)_L$(L)_mMax$(m_max)"
     mkpath(base_output_dir)
 
     # Adjust array to store results for each system and component
