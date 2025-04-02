@@ -205,10 +205,11 @@ end
 
 function main()
     # Parameters
-    Nf = 1500
-    LMAX = (80,80)
-    resolution = 32
-    rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
+    Nf = 2000
+    LMAX = (100,100)
+    #resolution = 32
+    rrs = [0.01; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
+    resolution = length(rrs)
     
     # 3D autoregressive model connection matrix
     A = [0.15  0.2  0.05;
@@ -217,16 +218,17 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("GARCH", nothing, 
-        [0.01,
-        [0.1, 0.05],  # ARCH(2)
-        [0.7, 0.2, 0.05]]  # GARCH(3)
-        , 1),  # ω, α, β
+        #("GARCH", nothing, 
+        #[0.01,
+        #[0.1, 0.05],  # ARCH(2)
+        #[0.7, 0.2, 0.05]]  # GARCH(3)
+        #, 1),  # ω, α, β
+        ("Logistic r=3.678", nothing, 3.678, 1),
+        ("Logistic r=4.0", nothing, 4.0, 1),
         ("AR(2)", nothing, [[0.7, -0.2], 0.5], 1),  # AR(2) with noise variance
         ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
         ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
         ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
-        ("Logistic 1D", nothing, 4.0, 1),
        # ("Logistic 3D", nothing, [3.711, 0.06], 1),
         ("Randn", nothing, nothing, 1),
         ("AR 0.1", nothing, 0.1, 1),
@@ -240,8 +242,8 @@ function main()
     ]
     
     # Output directories
-    data_path    = "data/motifs_transition_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/motifs_transition_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/motifs_2bits_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/motifs_2bits_times_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -272,7 +274,7 @@ function main()
             trajectory = generate_3d_hyperchaotic_logistic_map(params, Nf) # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         
-        elseif occursin("Logistic 1D", system_name)
+        elseif occursin("Logistic r", system_name)
             trajectory = generate_logistic_map(params, Nf) # Generate system trajectory
             time_series = trajectory
         

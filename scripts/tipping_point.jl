@@ -46,19 +46,19 @@ end
 x0 = [-0.9]
 
 # Time span (extended to a longer duration)
-tspan = (0.0, 700.0)  # Longer time to see tipping event
+tspan = (0.0, 600.0)  # Longer time to see tipping event
 
 # Parameters: noise level (σ), slow forcing rate (ε)
 σ = 0.1  # Climate variability (adjust for sensitivity)
-ε = 0.001 # Rate of external forcing (higher = faster climate change)
+ε = 0.002 # Rate of external forcing (higher = faster climate change)
 p = [σ, ε]
 
 # Split the time series into segments of 2000 points
 segment_size = 2000
 
 # Recurrence analysis parameters
-rrs = [0.01, 0.05, 0.1, 0.2]  # Example recurrence rates
-LMAX = (42, 42)  # Example limits
+rrs = [0.05, 0.1, 0.2]  # Example recurrence rates
+LMAX = (32, 32)  # Example limits
 
 
 # Solve the SDE (using more stable SOSRI() solver)

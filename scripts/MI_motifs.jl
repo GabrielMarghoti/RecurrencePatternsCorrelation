@@ -233,12 +233,72 @@ function plot_mutual_information(series, label; max_delay=50)
     plot(delays, mi_values, label=label, xlabel="Time Delay", ylabel="Mutual Information", legend=:topright)
 end
 
+function plot_cond_prob_level_curves(probabilities, rrs, is, js; log_scale=false, figures_path=".")
+    mkpath(figures_path)
+
+    i_equals_j_probs = zeros(length(is), length(rrs), 2^2)
+    i_equals_minusj_probs = zeros(length(is), length(rrs), 2^2)
+    vari_j0_probs = zeros(length(is), length(rrs), 2^2)
+    i0_varj_probs = zeros(length(is), length(rrs), 2^2)
+    for i in 1:length(is)
+        for idx in 1:length(rrs)
+            for motif_idx in 1:2^2
+                Rij, R00 = divrem(motif_idx - 1, 2)
+                i_equals_j_probs[i, idx, motif_idx] = R00==1 ?  probabilities[idx, i, i, motif_idx]/rrs[idx] : probabilities[idx, i, i, motif_idx]/(1-rrs[idx])
+                i_equals_minusj_probs[i, idx, motif_idx] = R00==1 ?  probabilities[idx, i, end-i+1, motif_idx]/rrs[idx] : probabilities[idx, i, end-i+1, motif_idx]/(1-rrs[idx])
+                vari_j0_probs[i, idx, motif_idx] = R00==1 ?  probabilities[idx, i, div(length(js),2)+1, motif_idx]/rrs[idx] : probabilities[idx, i, div(length(js),2)+1, motif_idx]/(1-rrs[idx])
+                i0_varj_probs[i, idx, motif_idx] = R00==1 ?  probabilities[idx, div(length(is),2)+1, i, motif_idx]/rrs[idx] : probabilities[idx, div(length(is),2)+1, i, motif_idx]/(1-rrs[idx])
+            end
+        end
+    end
+
+    for motif_idx in 1:2^2
+        Rij, R00 = divrem(motif_idx - 1, 2)
+        if log_scale
+            i_equals_j_probs = log.(i_equals_j_probs .+ 1e-12)
+            i_equals_minusj_probs = log.(i_equals_minusj_probs .+ 1e-12)
+            vari_j0_probs = log.(i_equals_j_probs .+ 1e-12)
+            i0_varj_probs = log.(i_equals_j_probs .+ 1e-12)
+        end
+        i_equals_j_plot = plot(is, i_equals_j_probs[:, :, motif_idx], 
+                                xlabel = "i'", ylabel = "Probability", 
+                                title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]; i'=j'",
+                                label = "rr=".*string.(rrs'), 
+                                 size = (600, 400), dpi=300, grid = false, frame_style=:box, widen=false)
+        
+        i_equals_minusj_plot = plot(is, i_equals_minusj_probs[:, :, motif_idx], 
+                                xlabel = "i'", ylabel = "Probability", 
+                                title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]; i'=-j'",
+                                label = "rr=".*string.(rrs'), 
+                                 size = (600, 400), dpi=300, grid = false, frame_style=:box, widen=false)
+
+        vari_j0_plot = plot(is, vari_j0_probs[:, :, motif_idx], 
+                                xlabel = "i'", ylabel = "Probability", 
+                                title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]; -j'=0",
+                                label = "rr=".*string.(rrs'), 
+                                size = (600, 400), dpi=300, grid = false, frame_style=:box, widen=false)
+
+        i0_varj_plot = plot(is, i0_varj_probs[:, :, motif_idx], 
+                                xlabel = "j'", ylabel = "Probability", 
+                                title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]; i'=0'",
+                                label = "rr=".*string.(rrs'), 
+                                size = (600, 400), dpi=300, grid = false, frame_style=:box, widen=false)
+
+        savefig(i_equals_j_plot, "$figures_path/i_equals_j_plot_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+        savefig(i_equals_minusj_plot, "$figures_path/i_equals_minusj_plot_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+        savefig(vari_j0_plot, "$figures_path/vari_j0_plot_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+        savefig(i0_varj_plot, "$figures_path/i0_varj_plot_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+    end
+
+end
+       
 function main()
     # Parameters
-    Nf = 2000
-    LMAX = (42,42)
-    resolution = 32
-    rrs = [0.01; 0.05; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
+    Nf = 1200
+    LMAX = (60,60)
+    #resolution = 32
+    rrs = [0.01; 0.02; 0.1; 0.2; 0.4] # 10 .^ range(-4, -0.01, resolution)
+    resolution = length(rrs)
     
     # 3D autoregressive model connection matrix
     A = [0.15  0.2  0.05;
@@ -247,31 +307,33 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("GARCH", nothing, 
-        [0.01,
-        [0.1, 0.05],  # ARCH(2)
-        [0.7, 0.2, 0.05]]  # GARCH(3)
-        , 1),  # ω, α, β
+        ("Logistic", nothing, 4.0, 1),
+        ("Logistic", nothing, 3.678, 1),
+        ("Randn", nothing, nothing, 1),
+        ("AR 0.1", nothing, 0.1, 1),
+        ("AR 0.9", nothing, 0.9, 1),
+        ("AR 0.99", nothing, 0.99, 1),
         ("AR(2)", nothing, [[0.7, -0.2], 0.5], 1),  # AR(2) with noise variance
         ("Lorenz traj", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], [1,2,3]),
         ("Lorenz (x)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 1),
         ("Lorenz (z)", lorenz!, [[10.0, 28.0, 8 / 3], 0.2], 3),
-        ("Logistic 1D", nothing, 4.0, 1),
        # ("Logistic 3D", nothing, [3.711, 0.06], 1),
-        ("Randn", nothing, nothing, 1),
-        ("AR 0.1", nothing, 0.1, 1),
        # ("AR 0.3", nothing, 0.3, 1),
        # ("AR 0.8", nothing, 0.8, 1),
-        ("AR 0.9", nothing, 0.9, 1),
        # ("3D AR 0.4", nothing, A, 1),
         ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1], [1,2,3]),
         ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1], 1),
-        ("Circle (sine)", nothing, 0.11347, 1)
+        ("Circle (sine)", nothing, 0.11347, 1),
+        ("GARCH", nothing, 
+        [0.01,
+        [0.1, 0.05],  # ARCH(2)
+        [0.7, 0.2, 0.05]]  # GARCH(3)
+        , 1)  # ω, α, β
     ]
     
     # Output directories
-    data_path    = "data/MI_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/MI_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/MI_curves_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/MI_curves_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -302,7 +364,7 @@ function main()
             trajectory = generate_3d_hyperchaotic_logistic_map(params, Nf) # Generate system trajectory
             time_series = trajectory[:, component]  # Extract component
         
-        elseif occursin("Logistic 1D", system_name)
+        elseif occursin("Logistic", system_name)
             trajectory = generate_logistic_map(params, Nf) # Generate system trajectory
             time_series = trajectory
         
@@ -322,18 +384,20 @@ function main()
         end
 
         # Plot and save the time series
-        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(1200,800))
+        plot(time_series, title = "$system_name Time Series", xlabel = "Time", ylabel = "Value", size=(2000,800))
         savefig(system_path*"/time_series.png")
 
         plot_mutual_information(time_series[:, 1], system_name; max_delay=LMAX[1])
         savefig(system_path*"/mutual_information.png")
 
+        is = -LMAX[1]:LMAX[1]
+        js = -LMAX[2]:LMAX[2]
         # Compute probabilities for each recurrence rate
         for idx in 1:length(rrs) # Create recurrence plot
             RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
 
-            for (i_idx,iprime) in enumerate(ProgressBar(-LMAX[1]:LMAX[1]))
-                Threads.@threads for j_idx in 1:length(-LMAX[2]:LMAX[2])
+            for (i_idx,iprime) in enumerate(ProgressBar(is))
+                Threads.@threads for j_idx in 1:length(js)
                     jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
                     probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.05)
@@ -349,6 +413,8 @@ function main()
             savefig(system_path*"/rr$(rrs[idx])/recurrence_plot.png")
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
+        plot_cond_prob_level_curves(probabilities[i, :, :, :, :], rrs, is, js, log_scale=false, figures_path=system_path*"/level_curves")
+           
     end
 end
 
