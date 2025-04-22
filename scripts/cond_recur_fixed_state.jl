@@ -399,12 +399,12 @@ function main()
             RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[idx]); metric = Euclidean(), parallel = true)
 
             for (i_idx,iprime) in enumerate(ProgressBar(is))
-                Threads.@threads for j_idx in 1:length(js)
-                    jprime = (-LMAX[2]:LMAX[2])[j_idx]
+                for (j_idx,jprime) in enumerate(ProgressBar(js))
                     L = (iprime, jprime)
                     probabilities[i, idx, i_idx, j_idx, max(1, -(i_idx-1)):min(N, N - i_idx), :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:columnwise, sampling_region=:all)
                 end
             end
+
             for t in 1:100:Nf
                 plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])_t$(t)")
                 plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])_t$(t)")
