@@ -297,7 +297,7 @@ end
 function main()
     # Parameters
     Nf = 1200
-    LMAX = (60,60)
+    LMAX = (40,40)
     #resolution = 32
     rrs = [0.01; 0.02; 0.1; 0.2; 0.4] # 10 .^ range(-4, -0.01, resolution)
     resolution = length(rrs)
@@ -326,22 +326,22 @@ function main()
         ("Rossler traj", rossler!, [[0.2, 0.2, 5.7], 1], [1,2,3]),
         ("Rossler (x)", rossler!, [[0.2, 0.2, 5.7], 1], 1),
         ("Circle (sine)", nothing, 0.11347, 1),
-        ("GARCH", nothing, 
-        [0.01,
-        [0.1, 0.05],  # ARCH(2)
-        [0.7, 0.2, 0.05]]  # GARCH(3)
-        , 1)  # ω, α, β
+        #("GARCH", nothing, 
+        #[0.01,
+        #[0.1, 0.05],  # ARCH(2)
+        #[0.7, 0.2, 0.05]]  # GARCH(3)
+        #, 1)  # ω, α, β
     ]
     
     # Output directories
-    data_path    = "data/MI_curves_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/MI_curves_motifs_global_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/fixed_state_cond_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/fixed_state_cond_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
     
     # Adjust array to store results for each system and component
-    probabilities = zeros(length(systems), resolution, 2*LMAX[1]+1, 2*LMAX[2]+1, 2*2)  # Extra dimension for components
+    probabilities = zeros(length(systems), resolution, 2*LMAX[1]+1, 2*LMAX[2]+1, Nf, 2*2)  # Extra dimension for components
     
     for (i, system_tuple) in enumerate(systems)
         system_name, system, params, component = system_tuple
@@ -402,12 +402,13 @@ function main()
                 Threads.@threads for j_idx in 1:length(js)
                     jprime = (-LMAX[2]:LMAX[2])[j_idx]
                     L = (iprime, jprime)
-                    probabilities[i, idx, i_idx, j_idx, :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:random, sampling_region=:upper, num_samples=0.05)
+                    probabilities[i, idx, i_idx, j_idx, max(1, -(i_idx-1)):min(N, N - i_idx), :] = motifs_probabilities(RP, L; shape=:timepair, sampling=:columnwise, sampling_region=:all)
                 end
             end
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])")
-            plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])")
-           
+            for t in 1:100:Nf
+                plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])_t$(t)")
+                plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])_t$(t)")
+            end
             # Plot and save the recurrence plot
             heatmap(RP, title = "$system_name Recurrence Plot", xlabel="Time", ylabel="Time",
             c=:grays, colorbar_title="Recurrence", size=(800, 600), dpi=200,
@@ -415,8 +416,9 @@ function main()
             savefig(system_path*"/rr$(rrs[idx])/recurrence_plot.png")
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
-        plot_cond_prob_level_curves(probabilities[i, :, :, :, :], rrs, is, js, log_scale=false, figures_path=system_path*"/level_curves")
-           
+        for t in 1:100:Nf
+            plot_cond_prob_level_curves(probabilities[i, :, :, :, t, :], rrs, is, js, log_scale=false, figures_path=system_path*"/level_curves_t$(t)")
+        end
     end
 end
 
