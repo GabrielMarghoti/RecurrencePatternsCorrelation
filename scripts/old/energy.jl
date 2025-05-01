@@ -171,6 +171,32 @@ function mutual_information(series, delay)
     return mi
 end
 
+function plot_motifs_transition_energy(probabilities, rr, LMAX; log_scale=true, figures_path=".")
+    mkpath(figures_path)
+
+    Xticks_nume = [-LMAX[1]:2:-2; 0 ; 2:2:LMAX[1]]
+    Xticks_name = ["i".*string.(-LMAX[1]:2:-2); "i" ;"i+".*string.(2:2:LMAX[1])]
+    Yticks_nume = [-LMAX[2]:2:-2; 0 ; 2:2:LMAX[2]]
+    Yticks_name = ["j".*string.(-LMAX[2]:2:-2); "j" ;"j+".*string.(2:2:LMAX[2])]
+
+    # Plot energy matrix
+    for motif_idx in 1:2^2
+        Rij, R00 = divrem(motif_idx - 1, 2)
+
+        # Compute energy as -log(probabilities)
+        energy = -log.(probabilities[:, :, motif_idx] .+ 1e-10)
+
+        trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
+                                    energy, 
+                                    aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
+                                    title = "Energy for P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Energy", 
+                                    xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    zlims = (0, maximum(energy)), 
+                                    size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, 
+                                    widen=false,  xrotation = 50)
+        savefig(trans_matrix_plot, "$figures_path/energy_$(string(motif_idx-1, base=2)).png")
+    end
+end
 function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=true, figures_path=".")
     mkpath(figures_path)
 
@@ -182,14 +208,13 @@ function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=tr
     # Plot transition times matrix
     for motif_idx in 1:2^2
         Rij, R00 = divrem(motif_idx - 1, 2)
-        
-        probabilities_motif = R00==1 ? probabilities[:, :, motif_idx]/rr : probabilities[:, :, motif_idx]/(1-rr)
+
         if log_scale
-            probabilities_motif = log.(probabilities_motif .+ 1e-10)
+            probabilities = log.(probabilities .+ 1e-10)
         end
     
         trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
-                                    probabilities_motif, 
+                                    probabilities[:, :, motif_idx], 
                                     aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
                                     title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
                                     xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
@@ -197,6 +222,33 @@ function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=tr
                                     size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, 
                                     widen=false,  xrotation = 50)
         savefig(trans_matrix_plot, "$figures_path/joint_P_log_$(log_scale)_$(string(motif_idx-1, base=2)).png")
+    end
+end
+
+function plot_motifs_transition_energy(probabilities, rr, LMAX; log_scale=true, figures_path=".")
+    mkpath(figures_path)
+
+    Xticks_nume = [-LMAX[1]:2:-2; 0 ; 2:2:LMAX[1]]
+    Xticks_name = ["i".*string.(-LMAX[1]:2:-2); "i" ;"i+".*string.(2:2:LMAX[1])]
+    Yticks_nume = [-LMAX[2]:2:-2; 0 ; 2:2:LMAX[2]]
+    Yticks_name = ["j".*string.(-LMAX[2]:2:-2); "j" ;"j+".*string.(2:2:LMAX[2])]
+
+    # Plot energy matrix
+    for motif_idx in 1:2^2
+        Rij, R00 = divrem(motif_idx - 1, 2)
+
+        # Compute energy as -log(probabilities)
+        energy = -log.(probabilities[:, :, motif_idx] .+ 1e-10)
+
+        trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
+                                    energy, 
+                                    aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
+                                    title = "Energy for P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Energy", 
+                                    xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
+                                    zlims = (0, maximum(energy)), 
+                                    size = (800, 800), dpi=300, grid = false, transpose = true, frame_style=:box, 
+                                    widen=false,  xrotation = 50)
+        savefig(trans_matrix_plot, "$figures_path/energy_$(string(motif_idx-1, base=2)).png")
     end
 end
 
@@ -242,13 +294,15 @@ function plot_motifs_transition_cond_prob(joint_probabilities, isolated_probabil
     # Plot transition times matrix
     for motif_idx in 1:2^2
         Rij, R00 = divrem(motif_idx - 1, 2)
+        
+        probabilities_motif = R00==1 ? probabilities[:, :, motif_idx]/rr : probabilities[:, :, motif_idx]/(1-rr)
 
         if log_scale
             probabilities = log.(probabilities .+ 1e-10)
         end
     
         trans_matrix_plot = heatmap(-LMAX[1]:LMAX[1], -LMAX[2]:LMAX[2], 
-                                    probabilities[:, :, motif_idx], 
+                                    probabilities_motif, 
                                     aspect_ratio = 1, c = :viridis, xlabel = "i+i'", ylabel = "j+j'", 
                                     title = "P[R(i+i',j+j')=$(Rij) | R(i,j)= $(R00)]", colorbar_title = "Probability", 
                                     xticks = (Xticks_nume, Xticks_name), yticks = (Yticks_nume, Yticks_name),
@@ -268,7 +322,7 @@ function plot_mutual_information(series, label; max_delay=50)
     plot(delays, mi_values, label=label, xlabel="Time Delay", ylabel="Mutual Information", legend=:topright)
 end
 
-function plot_cond_prob_level_curves(probabilities, rrs, is, js; log_scale=false, figures_path=".")
+function plot_joint_prob_level_curves(probabilities, rrs, is, js; log_scale=false, figures_path=".")
     mkpath(figures_path)
 
     i_equals_j_probs = zeros(length(is), length(rrs), 2^2)
@@ -329,8 +383,8 @@ end
        
 function main()
     # Parameters
-    Nf = 2001
-    LMAX = (20,20)
+    Nf = 1201
+    LMAX = (5,5)
     #resolution = 32
     rrs = [0.01; 0.1; 0.2] # 10 .^ range(-4, -0.01, resolution)
     resolution = length(rrs)
@@ -367,8 +421,8 @@ function main()
     ]
     
     # Output directories
-    data_path    = "data/fixed_state_cond_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
-    figures_path = "figures/fixed_state_cond_recur_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    data_path    = "data/energy_$(today())/Nf$(Nf)_LMAX$(LMAX)"
+    figures_path = "figures/energy_$(today())/Nf$(Nf)_LMAX$(LMAX)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -452,10 +506,11 @@ function main()
                 end
             end
 
-            for t in 1:50:Nf
+            for t in 1:100:Nf     
+                plot_motifs_transition_energy(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])/t$(t)")
                 plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=false, figures_path=system_path*"/rr$(rrs[idx])/t$(t)")
-                plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])/t$(t)")
-            end
+                #plot_motifs_transition_joint_prob(probabilities[i, idx, :, :, t, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])/t$(t)")
+               end
             #plot_motifs_transition_joint_prob_GIF(probabilities[i, idx, :, :, :, :], rrs[idx], LMAX, log_scale=true, figures_path=system_path*"/rr$(rrs[idx])")
             
             # Plot and save the recurrence plot
@@ -466,7 +521,7 @@ function main()
             #plot_motifs_transition_cond_prob(probabilities[i, idx, :, :, :], LMAX, log_scale=true, figures_path=figures_path*"/$system_name/rr$(rrs[idx])")
         end
         for t in 1:100:Nf
-            plot_cond_prob_level_curves(probabilities[i, :, :, :, t, :], rrs, is, js, log_scale=false, figures_path=system_path*"/level_curves/t$(t)")
+            plot_joint_prob_level_curves(probabilities[i, :, :, :, t, :], rrs, is, js, log_scale=false, figures_path=system_path*"/level_curves/t$(t)")
         end
     end
 end
