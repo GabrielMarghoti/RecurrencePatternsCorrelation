@@ -1,7 +1,63 @@
-module PlotUtils
+module PlotRPMotifs
 
 using Plots
 using Measures
+using PlotUtils
+
+using FileIO
+
+export plot_motifs_transition_times, plot_motifs_transition_times_GIF,
+       plot_motifs_transition_joint_prob, plot_motifs_transition_joint_prob_GIF,
+       plot_motifs_transition_cond_prob, plot_mutual_information,
+       plot_cond_prob_level_curves,
+       plot_recurrence_matrix,
+       plot_colored_scatter,
+       plot_quantifier_histogram
+
+function plot_recurrence_matrix(RP, system_name, system_path, rr; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
+    mkpath(system_path * "/rr$(rr)/")
+
+    plt = heatmap(RP, 
+                    title = "$system_name Recurrence Plot", 
+                    xlabel = xlabel, ylabel = ylabel,
+                    c = :binary, 
+                    size = (800, 600), dpi = 200,
+                    colorbar = false, frame_style = :box, 
+                    aspect_ratio = 1, widen = false)
+    
+    savefig(plt, system_path * "/rr$(rr)/" * filename)
+end
+
+function plot_colored_scatter(series, quantifier; xlabel="X", ylabel="Y", zlabel="Z", color_label="Quantifier", figures_path=".", filename="colored_scatter.png")
+    mkpath(figures_path)
+
+    plt = plot()  # initialize empty plot
+
+    if ndims(series) == 1
+        plot!(1:length(series), series, lw=1, color=:gray, label=false, size=(1000, 600), dpi=200)
+        scatter!(1:length(series), series, marker_z=quantifier, seriescolor=:viridis, ms=4,
+                xlabel="Time", ylabel=ylabel, colorbar_title=color_label, legend=false)
+    elseif size(series)[2] == 2
+        plot!(series[:, 1], series[:, 2], lw=1, color=:gray, label=false, size=(1200, 1000), dpi=200)
+        scatter!(series[:, 1], series[:, 2], marker_z=quantifier, seriescolor=:viridis, ms=4,
+                xlabel=xlabel, ylabel=ylabel, colorbar_title=color_label, legend=false)
+    elseif size(series)[2] == 3
+        plot!(series[:, 1], series[:, 2], series[:, 3], lw=1, color=:gray, label=false, size=(1200, 1000), dpi=200)
+        scatter!(series[:, 1], series[:, 2], series[:, 3], marker_z=quantifier, seriescolor=:viridis, ms=4,
+                xlabel=xlabel, ylabel=ylabel, zlabel=zlabel, colorbar_title=color_label, legend=false)
+    else
+        error("Series must be 1D, 2D, or 3D.")
+    end
+    
+    savefig(plt, joinpath(figures_path, filename))
+end
+
+function plot_quantifier_histogram(quantifier; xlabel="Quantifier", ylabel="Frequency", color=:blue, figures_path=".", filename="quantifier_histogram.png")
+    mkpath(figures_path)
+
+    plt = histogram(quantifier, bins=50, color=color, xlabel=xlabel, ylabel=ylabel, legend=false, size=(800, 600), dpi=200, frame_style=:box)
+    savefig(plt, joinpath(figures_path, filename))
+end
 
 function plot_motifs_transition_joint_prob(probabilities, rr, LMAX; log_scale=true, figures_path=".")
     mkpath(figures_path)
@@ -158,3 +214,6 @@ function plot_cond_prob_level_curves(probabilities, rrs, is, js; log_scale=false
     end
 
 end
+
+
+end # module

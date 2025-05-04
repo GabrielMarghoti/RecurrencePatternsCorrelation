@@ -13,7 +13,10 @@ export generate_garch,
        lorenz!,
        noisy_lorenz!,
        rossler!,
-       analyze_system
+       tipping_sde,
+       analyze_system,
+       analyze_sde_system
+
 
 # GARCH model generator
 function generate_garch(N, ω, α, β)
@@ -123,12 +126,42 @@ end
 
 # Analyze ODE-based system
 function analyze_system(system, params, Nf)
+
     Δt = params[2]
     tspan = (0.0, round(Int, 2 * Nf * Δt))
     u0 = 2 * rand(3)
     prob = ODEProblem(system, u0, tspan, params[1])
     sol = solve(prob, Tsit5(), dt = Δt, saveat = Δt, reltol = 1e-9, abstol = 1e-9, maxiters = 1e7)
     return Matrix(sol[:, end - Nf + 1:end]')
+end
+
+
+# Define the SDE function with slow forcing α(t)
+function tipping_sde(dx, x, p, t)
+    σ, ε = p  # Parameters: noise level, forcing rate
+    α = ε * t  # Slow drift forcing
+    dx[1] = (x[1] - x[1]^3 + α)  # Modified drift term
+end
+
+# Analyze ODE-based system
+function analyze_sde_system(system, params, Nf)
+
+    function noise_sde(dx, x, p, t)
+        σ, ε = p
+        dx[1] = σ  # Diffusion term (stochastic noise)
+    end
+    
+    Δt = params[2]
+    tspan = (0.0, Nf * Δt)
+    
+    # Solve the SDE (using more stable SOSRI() solver)
+    prob = SDEProblem(system, noise_sde, [-0.9], tspan, params[1])
+    sol = solve(prob, SOSRI(), dt=0.01, saveat=Δt)  # Ensure saving at Δt intervals
+
+    # Extract time and state values
+    x = [u[1] for u in sol.u[1:Nf]]
+    
+    return x
 end
 
 end # module
