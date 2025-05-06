@@ -102,6 +102,9 @@ end
 function generate_logistic_map(r, Nf)
     trajectory = zeros(Nf)
     trajectory[1] = rand()
+    for t in 1:Nf
+        trajectory[1] = r * trajectory[1] * (1 - trajectory[1])
+    end
     for t in 2:Nf
         trajectory[t] = r * trajectory[t-1] * (1 - trajectory[t-1])
     end

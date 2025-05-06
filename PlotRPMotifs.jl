@@ -6,13 +6,15 @@ using PlotUtils
 
 using FileIO
 
-export plot_motifs_transition_times, plot_motifs_transition_times_GIF,
+export plot, 
+       plot_motifs_transition_times, plot_motifs_transition_times_GIF,
        plot_motifs_transition_joint_prob, plot_motifs_transition_joint_prob_GIF,
        plot_motifs_transition_cond_prob, plot_mutual_information,
        plot_cond_prob_level_curves,
        plot_recurrence_matrix,
        plot_colored_scatter,
-       plot_quantifier_histogram
+       plot_quantifier_histogram,
+       save_histograms
 
 function plot_recurrence_matrix(RP, system_name, system_path, rr; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
     mkpath(system_path * "/rr$(rr)/")
@@ -25,7 +27,7 @@ function plot_recurrence_matrix(RP, system_name, system_path, rr; xlabel="Time",
                     colorbar = false, frame_style = :box, 
                     aspect_ratio = 1, widen = false)
     
-    savefig(plt, system_path * "/rr$(rr)/" * filename)
+    savefig(plt, system_path * "/rr$(rr)" * filename)
 end
 
 function plot_colored_scatter(series, quantifier; xlabel="X", ylabel="Y", zlabel="Z", color_label="Quantifier", figures_path=".", filename="colored_scatter.png")
@@ -34,7 +36,7 @@ function plot_colored_scatter(series, quantifier; xlabel="X", ylabel="Y", zlabel
     plt = plot()  # initialize empty plot
 
     if ndims(series) == 1
-        plot!(1:length(series), series, lw=1, color=:gray, label=false, size=(1000, 600), dpi=200)
+        plot!(1:length(series), series, lw=1, color=:gray, label=false, size=(2000, 600), dpi=200)
         scatter!(1:length(series), series, marker_z=quantifier, seriescolor=:viridis, ms=4,
                 xlabel="Time", ylabel=ylabel, colorbar_title=color_label, legend=false)
     elseif size(series)[2] == 2
@@ -216,4 +218,50 @@ function plot_cond_prob_level_curves(probabilities, rrs, is, js; log_scale=false
 end
 
 
+
+function save_histograms(data, labels, systems, title, save_path, filename)
+
+        if !isdir(save_path)
+            mkdir(save_path)
+        end
+    
+        num_systems = length(systems)
+        num_quantifiers = length(labels)
+
+        system_names = [system[1] for system in systems]
+        colors = distinguishable_colors(num_systems)  # Assign distinct colors to each system
+    
+        bar_data = zeros(num_quantifiers*num_systems)
+        x_axis_values = zeros(num_quantifiers*num_systems)
+        color_bars_plot = Vector{RGB}(undef, num_quantifiers*num_systems)  # Corrected initialization
+    
+        q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.1
+        group_q_label = Vector{String}(undef, num_quantifiers*num_systems)
+    
+        for (i, (system_name, system, params)) in enumerate(systems)
+            for q in 1:num_quantifiers
+    
+                bar_data[(i-1)*num_quantifiers+q] = data[q][i] 
+                color_bars_plot[(i-1)*num_quantifiers+q] = colors[q]
+    
+                x_axis_values[(i-1)*num_quantifiers+q] = i + q_offsets[q]
+                group_q_label[(i-1)*num_quantifiers+q] = labels[q]
+            end
+        end
+    
+        plt = bar(
+            x_axis_values, bar_data,
+            xlabel="System", ylabel="I",
+            group=group_q_label,  # Correct grouping
+            title=title,
+            bar_width=0.08, legend=:topright, size=(1200, 600), dpi=300,
+            color=color_bars_plot, xticks=(1:num_systems, system_names),
+            frame_style=:box, grid=false,
+            bottom_margin = 5mm,
+            left_margin = 5mm,
+        )
+    
+        savefig(plt, joinpath(save_path, filename))
+    end
+    
 end # module
