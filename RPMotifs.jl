@@ -12,14 +12,17 @@ export morans_I, local_morans_I,
     function morans_I(
         x::AbstractMatrix;
         weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),
-        Δi_range = -1:1,
-        Δj_range = -1:1
+        Δi_range = -2:2,
+        Δj_range = -2:2
     )
+        x = Matrix(x)
+
         N_i, N_j = size(x)
         mean_x = mean(x)
     
         numerator = 0.0
         W = 0.0
+        samples = 0.0
     
         for i in 1:N_i 
             for j in 1:N_j
@@ -47,12 +50,13 @@ export morans_I, local_morans_I,
                         W += w
                     end
                 end
+                samples += 1
             end
         end
     
         denominator = sum((x .- mean_x).^2)
     
-        return ((N_i * N_j) / W) * (numerator / denominator)
+        return ((samples) / W) * (numerator / denominator)
     end
     
 
@@ -60,9 +64,10 @@ export morans_I, local_morans_I,
     function local_morans_I(
         x::AbstractMatrix;
         weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),
-        Δi_range = -1:1,
-        Δj_range = -1:1
+        Δi_range = -2:2,
+        Δj_range = -2:2
     )
+        x = Matrix(x)
         N_j, N_i = size(x)
         results = fill(NaN, N_i)
     
@@ -70,6 +75,7 @@ export morans_I, local_morans_I,
             mean_x = mean(x[:, i])
             numerator = 0.0
             W = 0.0
+            samples = 0.0
     
             for j in 1:N_j
                 if j==i
@@ -95,11 +101,12 @@ export morans_I, local_morans_I,
                         W += w
                     end
                 end
+                samples += 1
             end
     
             if W > 0
                 denominator = sum((x[:, i] .- mean_x).^2)
-                results[i] = (N_j / W) * (numerator / denominator)
+                results[i] = (samples / W) * (numerator / denominator)
             end
         end
     

@@ -13,6 +13,7 @@ export plot,
        plot_cond_prob_level_curves,
        plot_recurrence_matrix,
        plot_colored_scatter,
+       plot_shared_xaxis_scatter,
        plot_quantifier_histogram,
        save_histograms
 
@@ -30,7 +31,7 @@ function plot_recurrence_matrix(RP, system_name, system_path, rr; xlabel="Time",
     savefig(plt, system_path * "/rr$(rr)" * filename)
 end
 
-function plot_colored_scatter(series, quantifier; xlabel="X", ylabel="Y", zlabel="Z", color_label="Quantifier", figures_path=".", filename="colored_scatter.png")
+function plot_colored_scatter(series, quantifier; xlabel="x", ylabel="y", zlabel="z", color_label="Quantifier", figures_path=".", filename="colored_scatter.png")
     mkpath(figures_path)
 
     plt = plot()  # initialize empty plot
@@ -51,6 +52,21 @@ function plot_colored_scatter(series, quantifier; xlabel="X", ylabel="Y", zlabel
         error("Series must be 1D, 2D, or 3D.")
     end
     
+    savefig(plt, joinpath(figures_path, filename))
+end
+
+function plot_shared_xaxis_scatter(series, quantifier; xlabel="Time", ylabel="x", quantifier_label="Quantifier", figures_path=".", filename="shared_xaxis_scatter.png")
+    mkpath(figures_path)
+
+    plt = plot(layout=(2, 1), size=(600, 300), dpi=200)
+
+    if ndims(series) == 1
+        plot!(plt[1], 1:length(series), series, lw=1, color=:blue, label="Data", xlabel=xlabel, ylabel=ylabel)
+        plot!(plt[2], 1:length(series), quantifier, lw=1, color=:red, label="", xlabel=xlabel, ylabel=quantifier_label)
+    else
+        error("Series must be 1D, 2D, or 3D.")
+    end
+
     savefig(plt, joinpath(figures_path, filename))
 end
 

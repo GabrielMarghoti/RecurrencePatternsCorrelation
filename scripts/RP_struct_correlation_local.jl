@@ -16,7 +16,7 @@ using ..RPMotifs
 
 function main()
     # Parameters
-    Nf = 5000
+    Nf = 2000
     
     #rr_resol = 20
     rrs = [0.01; 0.1; 0.2] #10 .^ range(-4, -0.01, rr_resol)
@@ -29,7 +29,7 @@ function main()
     
     # Systems to analyze
     systems = [
-        #("Tipping point sde", [[0.1, 0.004], 0.1], 1),
+        ("Tipping point sde", [[0.1, 0.004], 0.1], 1),
         ("Lorenz traj", [[10.0, 28.0, 8 / 3], 0.05], [1,2,3]),
         ("Rossler traj", [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
         ("Logistic", 4.0, 1),
@@ -55,10 +55,13 @@ function main()
     ]
     
     # Output directories
-    data_path    = "data/Morans_I_local_$(today())/Nf$(Nf)"
+    global_data_path = "data/Morans_I_global/Nf$(Nf)"
+    time_series_path = "data/time_series"
+    data_path    = "data/Morans_I_local/Nf$(Nf)"
     figures_path = "figures/Morans_I_local_$(today())/Nf$(Nf)"
 
     mkpath(data_path)
+    mkpath(time_series_path)
     mkpath(figures_path)
     
     # Adjust array to store results for each system and component
@@ -81,10 +84,27 @@ function main()
         system_path = figures_path*"/$system_name$(params)"
         mkpath(system_path)
         
-        time_series = generate_time_series(system_name, params, Nf, component) # Generate time series
+        # Try to load the time series from cache
+        time_series_file = joinpath(time_series_path, "time_series_$(system_name)_$(params).jld2")
+        if isfile(time_series_file)
+            println("   Loading cached time series")
+            @load time_series_file time_series
+        else
+            println("   Generating new time series")
+            time_series = generate_time_series(system_name, params, Nf, component) # Generate time series
+            @save time_series_file time_series
+        end
 
-        for rr_idx in 1:rr_resol # Create recurrence plot
-            RP = Matrix(RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[rr_idx]); metric = Euclidean(), parallel = true))
+        for rr_idx in 1:rr_resol # Create recurrence plot            
+            RP_file = joinpath(data_path, "RP_$(system_name)_$(params)_rr$(rrs[rr_idx]).jld2")
+            if isfile(RP_file)
+                @load RP_file RP _rqa_sys
+            else
+                RP = RecurrenceMatrix(StateSpaceSet(time_series), GlobalRecurrenceRate(rrs[rr_idx]); metric = Euclidean(), parallel = true)
+                _rqa_sys = rqa(RP)
+                @save RP_file RP _rqa_sys
+            end
+
             plot_recurrence_matrix(RP, system_name, system_path, rrs[rr_idx]; filename="recurrence_plot.png")
 
             Morans_I_diag[:, i, rr_idx] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
@@ -116,6 +136,11 @@ function main()
                 figures_path=system_path*"/rr$(rrs[rr_idx])", 
                 filename="moran_I_8sides.png")
 
+            if ndims(time_series) == 1 
+                plot_shared_xaxis_scatter(time_series, Morans_I_diag[:, i, rr_idx]; quantifier_label="I Diagonals", 
+                figures_path=system_path*"/rr$(rrs[rr_idx])", 
+                filename="xaxis_share_moran_I_diagonal.png")
+            end
 
             plot_quantifier_histogram(Morans_I_diag[:, i, rr_idx]; xlabel="Moran's I for diagonals", 
                 ylabel="Frequency", 
