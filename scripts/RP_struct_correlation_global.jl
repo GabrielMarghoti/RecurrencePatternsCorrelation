@@ -5,7 +5,7 @@ using ProgressBars
 using Dates
 using Random, Distributions
 using Plots 
-
+using DelayEmbeddings
 using JLD2
 
 include("../PlotRPMotifs.jl")
@@ -109,7 +109,7 @@ function main()
             else
                 if size(time_series, 2) == 1
                     #println("   Performing Pecuzal embedding for 1D time series")
-                    embedded_time_series = pecuzal(time_series[:, 1])
+                    embedded_time_series = pecuzal_embedding(time_series)[1]
                 else
                     embedded_time_series = time_series
                 end
