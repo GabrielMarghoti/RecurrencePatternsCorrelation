@@ -18,8 +18,8 @@ function main()
     # Parameters
     Nf = 2000
     
-    rr_resol = 100
-    rrs = 10 .^ range(-3, -0.001, rr_resol)
+    rr_resol = 20
+    rrs = range(0, 1, rr_resol)#10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
     
     # 3D autoregressive model connection matrix
@@ -56,8 +56,8 @@ function main()
     
     # Output directories
     time_series_path = "data/time_series"
-    data_path    = "data/Morans_I_global/Nf$(Nf)/"
-    figures_path = "figures/Morans_I_global_$(today())/Nf$(Nf)/"
+    data_path    = "data/RPC_distributions_I_global/Nf$(Nf)/"
+    figures_path = "figures/RPC_distributions_I_global_$(today())/Nf$(Nf)/"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -126,7 +126,7 @@ function main()
             det_results[i, rr_idx] = _rqa_sys[:DET]
             lam_results[i, rr_idx] = _rqa_sys[:LAM]
 
-            plot_recurrence_matrix(RP, system_name, systerr_fig_pathm_path, rrs[rr_idx]; filename="recurrence_plot.png")
+            plot_recurrence_matrix(RP, system_name, rr_fig_path, rrs[rr_idx]; filename="recurrence_plot.png")
 
             Morans_I_diag[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0))
 
@@ -137,6 +137,10 @@ function main()
             Morans_I_4sides[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (abs(Δi) + abs(Δj) == 1 ? 1 : 0))
 
             Morans_I_8sides[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi in [-1, 0, 1] && Δj in [-1, 0, 1] ? 1 : 0))
+            for deltai in -1:1, deltaj in -1:1
+                cond_values = _cond_recurrence_values(RP; Δi=deltai, Δj=deltaj)
+                plot_quantifier_histogram(cond_values; xlabel="(R(i,j)-rr)(R(i+Δi, j+ Δj)-rr)", ylabel="Frequency", color=:blue, figures_path=rr_fig_path, filename="Δi$(deltai)_Δj$(deltaj).png")
+            end
         end
 
         # save 
@@ -170,6 +174,13 @@ function main()
                    title = "$system_name Moran's I vs rr (Linear Scale)", 
                    legend = true, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
         savefig(plt_linear, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_rr_linear.png"))
+        # 
+        plt_diag_vs_DET = plot(rrs, [Morans_I_diag[i, :] det_results[i, :]],
+                   label = ["RPC Diagonal" "DET"],
+                   xlabel = "Recurrence Rate (rr)", ylabel = "Quantifier", 
+                   title = "$system_name", 
+                   legend = true, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
+        savefig(plt_diag_vs_DET, joinpath(figures_path*"$(system_name)_$(params)", "RPC_diag_DET.png"))
 
         # Plot in log-log scale
         plt_xlog = plot(rrs, [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],

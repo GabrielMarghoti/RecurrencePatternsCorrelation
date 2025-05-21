@@ -18,7 +18,7 @@ function main()
     # Parameters
     Nf = 2000
     
-    rr_resol = 100
+    rr_resol = 10
     rrs = 10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
     
@@ -29,9 +29,9 @@ function main()
     
     # Systems to analyze
     systems = [
-        ("Tipping point sde", [[0.1, 0.004], 0.1], 1),
         ("Lorenz traj", [[10.0, 28.0, 8 / 3], 0.05], [1,2,3]),
         ("Rossler traj", [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
+        ("Circle", 0.11347, [1,2]),
         ("Logistic", 4.0, 1),
         ("AR 0.9", 0.9, 1),
         ("Logistic", 3.678, 1),
@@ -46,7 +46,7 @@ function main()
        # ("AR 0.8", nothing, 0.8, 1),
         ("3D AR", A, 1),
         ("Rossler (x)", [[0.2, 0.2, 5.7], 0.5], 1),
-        ("Circle", 0.11347, [1,2]),
+        ("Tipping point sde", [[0.1, 0.004], 0.1], 1),
         #("GARCH", nothing, 
         #[0.01,
         #[0.1, 0.05],  # ARCH(2)
@@ -56,8 +56,8 @@ function main()
     
     # Output directories
     time_series_path = "data/time_series"
-    data_path    = "data/Morans_I_global/Nf$(Nf)/"
-    figures_path = "figures/Morans_I_global_$(today())/Nf$(Nf)/"
+    data_path    = "data/RPC_d_ij_epsilondiff_distributions/Nf$(Nf)/"
+    figures_path = "figures/RPC_d_ij_epsilondiff_distributions$(today())/Nf$(Nf)/"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -114,33 +114,73 @@ function main()
             rr_fig_path = joinpath(system_path, "rr$(rrs[rr_idx])/")
             rr_data_path = joinpath(data_path, "rr$(rrs[rr_idx])/")
             mkpath(rr_data_path)
-            RP_file = joinpath(rr_data_path, "RP_$(system_name)_$(params).jld2")
-            if false#isfile(RP_file)
-                @load  RP_file RP _rqa_sys
-            else
-                RP = RecurrenceMatrix(StateSpaceSet(embedded_time_series), GlobalRecurrenceRate(rrs[rr_idx]); metric = Euclidean(), parallel = true)
-                _rqa_sys = rqa(RP)
-                @save RP_file RP _rqa_sys
-            end
+            mkpath(rr_fig_path)
+            
+            dij = distancematrix(StateSpaceSet(embedded_time_series))
+            epsilon = rrs[rr_idx]*maximum(dij)
+            
 
+            RP = RecurrenceMatrix(StateSpaceSet(embedded_time_series), epsilon; metric = Euclidean())
+            _rqa_sys = rqa(RP)
+            
             det_results[i, rr_idx] = _rqa_sys[:DET]
             lam_results[i, rr_idx] = _rqa_sys[:LAM]
 
-            plot_recurrence_matrix(RP, system_name, systerr_fig_pathm_path, rrs[rr_idx]; filename="recurrence_plot.png")
+            plot_recurrence_matrix(dij.-epsilon, system_name, rr_fig_path; filename="dij-eps.png")
 
-            Morans_I_diag[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0))
+            Morans_I_diag[i, rr_idx] = RPC((dij), (epsilon); weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0))
 
-            Morans_I_anti_diag[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == -Δj ? 1 : 0))
+            Morans_I_anti_diag[i, rr_idx] = RPC((dij), (epsilon); weight_function = (Δi, Δj) -> (Δi == -Δj ? 1 : 0))
 
-            Morans_I_vert_line[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δj == 0 ? 1 : 0))
+            Morans_I_vert_line[i, rr_idx] = RPC((dij), (epsilon); weight_function = (Δi, Δj) -> (Δj == 0 ? 1 : 0))
 
-            Morans_I_4sides[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (abs(Δi) + abs(Δj) == 1 ? 1 : 0))
+            Morans_I_4sides[i, rr_idx] = RPC((dij), (epsilon); weight_function = (Δi, Δj) -> (abs(Δi) + abs(Δj) == 1 ? 1 : 0))
 
-            Morans_I_8sides[i, rr_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi in [-1, 0, 1] && Δj in [-1, 0, 1] ? 1 : 0))
+            Morans_I_8sides[i, rr_idx] = RPC((dij), (epsilon); weight_function = (Δi, Δj) -> (Δi in [-1, 0, 1] && Δj in [-1, 0, 1] ? 1 : 0))
+            for deltai in -1:1, deltaj in -1:1
+                cond_values = _cond_recurrence_values((dij); Δi=deltai, Δj=deltaj)
+                plot_quantifier_histogram(cond_values; xlabel="(R(i,j)-rr)(R(i+Δi, j+ Δj)-rr)", ylabel="Frequency", color=:blue, figures_path=rr_fig_path, filename="Δi$(deltai)_Δj$(deltaj).png")
+            end
         end
+                    
+        # Plot in linear scale
+        plt_linear = plot(rrs, [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
+                label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
+                xlabel = "Recurrence Rate (rr)", ylabel = "Moran's I", 
+                title = "$system_name Moran's I vs rr (Linear Scale)", 
+                legend = true, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
+        savefig(plt_linear, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_rr_linear.png"))
+        # 
+        plt_diag_vs_DET = plot(rrs, [Morans_I_diag[i, :] det_results[i, :]],
+                label = ["RPC Diagonal" "DET"],
+                xlabel = "Recurrence Rate (rr)", ylabel = "Quantifier", 
+                title = "$system_name", 
+                legend = true, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
+        savefig(plt_diag_vs_DET, joinpath(figures_path*"$(system_name)_$(params)", "RPC_diag_DET.png"))
 
-        # save 
-        @save file_path rrs Morans_I_diag Morans_I_anti_diag Morans_I_vert_line Morans_I_4sides Morans_I_8sides det_results lam_results
+        # Plot in log-log scale
+        plt_xlog = plot(rrs, [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
+                label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
+                xlabel = "Recurrence Rate (rr)", ylabel = "Moran's I", 
+                title = "$system_name Moran's I vs rr (Log-Log Scale)", 
+                legend = true, xscale = :log10, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
+        savefig(plt_xlog, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_rr_xlog.png"))
+
+        # Scatter plot for :DET
+        plt_det = scatter(det_results[i, :], [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
+            label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
+            xlabel = ":DET", ylabel = "Moran's I", 
+            title = "$system_name Moran's I vs :DET", 
+            legend = :outerright, size = (600, 400), dpi = 200, grid = true, frame_style = :box)
+        savefig(plt_det, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_DET.png"))
+
+        # Scatter plot for :LAM
+        plt_lam = scatter(lam_results[i, :], [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
+            label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
+            xlabel = ":LAM", ylabel = "Moran's I", 
+            title = "$system_name Moran's I vs :LAM", 
+            legend = :outerright, size = (600, 400), dpi = 200, grid = true, frame_style = :box)
+        savefig(plt_lam, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_LAM.png"))
     end
 
     # Plot histograms comparing systems for each recurrence rate
@@ -155,48 +195,8 @@ function main()
   
         # Plot histograms
         save_histograms(histogram_data, labels, systems, "Recurrence Structure Correlation for rr=$(rrs[rr_idx])", figures_path, "bar_plot_rr$(rrs[rr_idx]).png")
-
     end
 
-
-    # Plot Moran's I as a function of recurrence rate for each system
-    for i in 1:length(systems)
-        system_name, params, component = systems[i]
-
-        # Plot in linear scale
-        plt_linear = plot(rrs, [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
-                   label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
-                   xlabel = "Recurrence Rate (rr)", ylabel = "Moran's I", 
-                   title = "$system_name Moran's I vs rr (Linear Scale)", 
-                   legend = true, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
-        savefig(plt_linear, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_rr_linear.png"))
-
-        # Plot in log-log scale
-        plt_xlog = plot(rrs, [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
-                   label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
-                   xlabel = "Recurrence Rate (rr)", ylabel = "Moran's I", 
-                   title = "$system_name Moran's I vs rr (Log-Log Scale)", 
-                   legend = true, xscale = :log10, size = (600, 400), dpi = 200, grid = false, frame_style = :box)
-        savefig(plt_xlog, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_rr_xlog.png"))
-
-
-        # Scatter plot for :DET
-        plt_det = scatter(det_results[i, :], [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
-              label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
-              xlabel = ":DET", ylabel = "Moran's I", 
-              title = "$system_name Moran's I vs :DET", 
-              legend = :outerright, size = (600, 400), dpi = 200, grid = true, frame_style = :box)
-        savefig(plt_det, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_DET.png"))
-
-        # Scatter plot for :LAM
-        plt_lam = scatter(lam_results[i, :], [Morans_I_diag[i, :] Morans_I_anti_diag[i, :] Morans_I_vert_line[i, :] Morans_I_4sides[i, :] Morans_I_8sides[i, :]],
-              label = ["Diagonal" "Anti-Diagonal" "Vertical Line" "4-Sides" "8-Sides"],
-              xlabel = ":LAM", ylabel = "Moran's I", 
-              title = "$system_name Moran's I vs :LAM", 
-              legend = :outerright, size = (600, 400), dpi = 200, grid = true, frame_style = :box)
-        savefig(plt_lam, joinpath(figures_path*"$(system_name)_$(params)", "Morans_I_vs_LAM.png"))
-
-    end
 
     # Scatter plot for :DET
     plt_det = scatter(det_results', Morans_I_diag',

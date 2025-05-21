@@ -6,14 +6,16 @@ include("./DynamicalSystemsToolkit.jl")
 using .DynamicalSystemsToolkit
 
 export morans_I, local_morans_I,
-       generate_time_series
+       generate_time_series,
+       _cond_recurrence_values,
+       RPC
 
-    # Global Moran's I 
+       # Global Moran's I 
     function morans_I(
         x::AbstractMatrix;
         weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),
-        Δi_range = -2:2,
-        Δj_range = -2:2
+        Δi_range = -1:1,
+        Δj_range = -1:1
     )
         x = Matrix(x)
 
@@ -58,6 +60,7 @@ export morans_I, local_morans_I,
     
         return ((samples) / W) * (numerator / denominator)
     end
+    
     
 
     # Local Moran's I, column-wise
@@ -160,8 +163,86 @@ export morans_I, local_morans_I,
     end
 
 
+    function _cond_recurrence_values(
+        x::AbstractMatrix;
+        Δi = 1,
+        Δj = 1
+    )
+        x = Matrix(x)
+        N_j, N_i = size(x)
+        mean_x = mean(x)
+        values = []
+    
+        for i in 1:N_i
+            for j in 1:N_j
+                if j==i
+                    continue
+                end
+        
+                i′ = i + Δi
+                j′ = j + Δj
+    
+                if 1 ≤ i′ ≤ N_i && 1 ≤ j′ ≤ N_j
+                    xi = x[j, i]   - mean_x
+                    xj = x[j′, i′] - mean_x
+                    push!(values, xi * xj)
+                end
+            end
+        end
+    
+        return values
+    end
 
 
+    # Global Moran's I 
+    function RPC(
+        x::AbstractMatrix,
+        epsilon;
+        weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),
+        Δi_range = -1:1,
+        Δj_range = -1:1,
+    )
+        x = Matrix(x)
 
+        N_i, N_j = size(x)
+    
+        numerator = 0.0
+        W = 0.0
+        samples = 0.0
+    
+        for i in 1:N_i 
+            for j in 1:N_j
+                if j==i
+                    continue
+                end
+                xi = x[j, i] - epsilon
+        
+                for Δi in Δi_range, Δj in Δj_range
+                    if Δi == 0 && Δj == 0
+                        continue
+                    end
+        
+                    w = weight_function(Δi, Δj)
+                    if w == 0
+                        continue
+                    end
+        
+                    i′ = i - Δi
+                    j′ = j - Δj
+        
+                    if 1 ≤ i′ ≤ N_i && 1 ≤ j′ ≤ N_j
+                        xj = x[j′, i′] - epsilon
+                        numerator += w * xi * xj
+                        W += w
+                    end
+                end
+                samples += 1
+            end
+        end
+    
+        denominator = sum((x .- epsilon).^2)
+    
+        return ((samples) / W) * (numerator / denominator)
+    end
 
 end # module

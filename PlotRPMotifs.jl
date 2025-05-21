@@ -17,18 +17,18 @@ export plot,
        plot_quantifier_histogram,
        save_histograms
 
-function plot_recurrence_matrix(RP, system_name, system_path, rr; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
-    mkpath(system_path * "/rr$(rr)/")
+function plot_recurrence_matrix(RP, system_name, save_path; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
+    mkpath(save_path)
 
     plt = heatmap(RP, 
-                    title = "$system_name Recurrence Plot", 
+                    title = "$system_name", 
                     xlabel = xlabel, ylabel = ylabel,
                     c = :binary, 
                     size = (800, 600), dpi = 200,
-                    colorbar = false, frame_style = :box, 
+                    colorbar = true, frame_style = :box, 
                     aspect_ratio = 1, widen = false)
     
-    savefig(plt, system_path * "/rr$(rr)" * filename)
+    savefig(plt, joinpath(save_path, filename))
 end
 
 function plot_colored_scatter(series, quantifier; xlabel="x", ylabel="y", zlabel="z", color_label="Quantifier", figures_path=".", filename="colored_scatter.png")
@@ -73,7 +73,7 @@ end
 function plot_quantifier_histogram(quantifier; xlabel="Quantifier", ylabel="Frequency", color=:blue, figures_path=".", filename="quantifier_histogram.png")
     mkpath(figures_path)
 
-    plt = histogram(quantifier, bins=50, color=color, xlabel=xlabel, ylabel=ylabel, legend=false, size=(800, 600), dpi=200, frame_style=:box)
+    plt = histogram(quantifier, bins=100, color=color, xlabel=xlabel, ylabel=ylabel, legend=false, size=(800, 600), dpi=200, frame_style=:box)
     savefig(plt, joinpath(figures_path, filename))
 end
 
