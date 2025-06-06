@@ -3,6 +3,7 @@ module PlotRPMotifs
 using Plots
 using Measures
 using PlotUtils
+using LaTeXStrings
 
 using FileIO
 
@@ -15,7 +16,8 @@ export plot,
        plot_colored_scatter,
        plot_shared_xaxis_scatter,
        plot_quantifier_histogram,
-       save_histograms
+       save_histograms,
+       save_patterns_histograms
 
 function plot_recurrence_matrix(RP, system_name, save_path; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
     mkpath(save_path)
@@ -233,7 +235,35 @@ function plot_cond_prob_level_curves(probabilities, rrs, is, js; log_scale=false
 
 end
 
+function save_patterns_histograms(data, labels, systems, title, save_path, filename; color_scheme = nothing)
+    if !isdir(save_path)
+        mkdir(save_path)
+    end
 
+    num_systems = length(systems)
+    num_quantifiers = length(labels)
+
+    system_names = [system[1] for system in systems]
+    colors = color_scheme == nothing ? distinguishable_colors(num_systems) : color_scheme  # Assign distinct colors to each system
+
+    # Prepare data for grouped bar plot: x-axis is quantifiers, each bar is a system
+    bar_data = [data[q] for q in 1:num_quantifiers]  # Each element is a vector of system values for quantifier q
+    # bar_data is a vector of vectors, each of length num_systems
+
+    plt = bar(
+        labels, bar_data,
+        xlabel="Quantifier", ylabel=L"RPC",
+        group=system_names,
+        title=title,
+        bar_width=0.7/num_systems, legend=:topright, size=(1000, 500), dpi=300,
+        color=colors,
+        frame_style=:box, grid=false,
+        bottom_margin = 5mm,
+        left_margin = 5mm,
+    )
+
+    savefig(plt, joinpath(save_path, filename))
+end
 
 function save_histograms(data, labels, systems, title, save_path, filename)
 
@@ -267,10 +297,10 @@ function save_histograms(data, labels, systems, title, save_path, filename)
     
         plt = bar(
             x_axis_values, bar_data,
-            xlabel="System", ylabel="I",
+            xlabel="System", ylabel=L"RPC",
             group=group_q_label,  # Correct grouping
             title=title,
-            bar_width=0.08, legend=:topright, size=(1200, 600), dpi=300,
+            bar_width=0.08, legend=:topright, size=(1000, 500), dpi=300,
             color=color_bars_plot, xticks=(1:num_systems, system_names),
             frame_style=:box, grid=false,
             bottom_margin = 5mm,

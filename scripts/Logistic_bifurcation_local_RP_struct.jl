@@ -19,14 +19,14 @@ function main()
     # Parameters
     Nf = 2000
     
-    rr = 0.05
+    eps = 0.02
 
-    r_resol = 500
-    rs = range(3.1, 4, length = r_resol) 
+    r_resol = 300
+    rs = range(2.9, 4, length = r_resol) 
     
     # Output directories
-    data_path    = "data/Logistic_bifurcation_local_$(today())/Nf$(Nf)"
-    figures_path = "figures/Logistic_bifurcation_local_$(today())/Nf$(Nf)"
+    data_path    = "data/Logistic_bifurcation_local_$(today())/Nf$(Nf)_r_resol$(r_resol)"
+    figures_path = "figures/Logistic_bifurcation_local_$(today())/Nf$(Nf)_r_resol$(r_resol)"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -50,17 +50,17 @@ function main()
         r = rs[i]
         time_series[:, i] = generate_time_series("Logistic", r, Nf, 1) # Generate time series
 
-        RP = Matrix(RecurrenceMatrix(StateSpaceSet(time_series[:, i]), GlobalRecurrenceRate(rr); metric = Euclidean(), parallel = true))
+        RP = Matrix(RecurrenceMatrix(StateSpaceSet(time_series[:, i]), eps; metric = Euclidean(), parallel = true))
     
-        Morans_I_diag[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
+        Morans_I_diag[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0), Δi_range = -1:1, Δj_range = -1:1)
 
-        Morans_I_anti_diag[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == -Δj ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
+        Morans_I_anti_diag[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == -Δj ? 1 : 0), Δi_range = -1:1, Δj_range = -1:1)
 
-        Morans_I_vert_line[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δj == 0 ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
+        Morans_I_vert_line[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δj == 0 ? 1 : 0), Δi_range = -1:1, Δj_range = -1:1)
 
-        Morans_I_4sides[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (abs(Δi) + abs(Δj) == 1 ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
+        Morans_I_4sides[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (abs(Δi) + abs(Δj) == 1 ? 1 : 0), Δi_range = -1:1, Δj_range = -1:1)
 
-        Morans_I_8sides[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi in [-1, 0, 1] && Δj in [-1, 0, 1] ? 1 : 0), Δi_range = -5:5, Δj_range = -5:5)
+        Morans_I_8sides[:, i] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi in [-1, 0, 1] && Δj in [-1, 0, 1] ? 1 : 0), Δi_range = -1:1, Δj_range = -1:1)
         
     end
     circ = Shape(Plots.partialcircle(0, 2π))
@@ -75,7 +75,7 @@ function main()
     xlabel!("r")
     ylabel!("x")
     title!("Bifurcation Diagram with Moran's I (Diagonal)")
-    savefig(joinpath(figures_path, "bifurcation_diagram_diag.png"))
+    savefig(joinpath(figures_path, "bifurcation_diagram_diag_eps$(eps).png"))
 
     # Plot bifurcation diagram with Moran's I (Anti-Diagonal) as colors
     for i in 1:Nf
@@ -88,7 +88,7 @@ function main()
     xlabel!("r")
     ylabel!("x")
     title!("Bifurcation Diagram with Moran's I (Anti-Diagonal)")
-    savefig(joinpath(figures_path, "bifurcation_diagram_anti_diag.png"))
+    savefig(joinpath(figures_path, "bifurcation_diagram_anti_diag_eps$(eps).png"))
 
     # Plot bifurcation diagram with Moran's I (Vertical Line) as colors
     for i in 1:Nf
@@ -101,7 +101,7 @@ function main()
     xlabel!("r")
     ylabel!("x")
     title!("Bifurcation Diagram with Moran's I (Vertical Line)")
-    savefig(joinpath(figures_path, "bifurcation_diagram_vert_line.png"))
+    savefig(joinpath(figures_path, "bifurcation_diagram_vert_line_eps$(eps).png"))
 
     # Plot bifurcation diagram with Moran's I (4 Sides) as colors
     for i in 1:Nf
@@ -114,7 +114,7 @@ function main()
     xlabel!("r")
     ylabel!("x")
     title!("Bifurcation Diagram with Moran's I (4 Sides)")
-    savefig(joinpath(figures_path, "bifurcation_diagram_4sides.png"))
+    savefig(joinpath(figures_path, "bifurcation_diagram_4sides_eps$(eps).png"))
 
     # Plot bifurcation diagram with Moran's I (8 Sides) as colors
     for i in 1:Nf
@@ -127,7 +127,7 @@ function main()
     xlabel!("r")
     ylabel!("x")
     title!("Bifurcation Diagram with Moran's I (8 Sides)")
-    savefig(joinpath(figures_path, "bifurcation_diagram_8sides.png"))
+    savefig(joinpath(figures_path, "bifurcation_diagram_8sides_eps$(eps).png"))
     
 end
 

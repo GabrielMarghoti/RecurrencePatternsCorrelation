@@ -4,7 +4,8 @@ using Random
 using Distributions
 using DifferentialEquations
 
-export generate_garch,
+export generate_nar_trajectory,
+        generate_garch,
        generate_ar,
        generate_ar_trajectory,
        generate_3d_ar_trajectory,
@@ -17,6 +18,32 @@ export generate_garch,
        analyze_system,
        analyze_sde_system
 
+
+       # Nonlinear (polynomial) autoregressive trajectory generator
+function generate_nar_trajectory(coeffs::Vector{Float64}, Nf::Int)
+    """
+    Generate a nonlinear autoregressive trajectory using a polynomial model.
+    
+    Arguments:
+        coeffs: Vector of polynomial coefficients [a1, a2, ..., ad] for terms x^(1), x^(2), ..., x^(d)
+        Nf: Length of trajectory
+    
+    Returns:
+        trajectory: Vector of Nf values following the nonlinear autoregressive rule
+    """
+    d = length(coeffs)   # Degree of polynomial
+    trajectory = zeros(Nf)
+    trajectory[1] = 0.01 * randn()
+    
+    for t in 2:Nf
+        x = trajectory[t-1]
+        nonlinear_part = sum(coeffs[i] * x^i for i in 1:d)
+        noise = 0.01 * randn()
+        trajectory[t] = nonlinear_part + noise
+    end
+    
+    return trajectory
+end
 
 # GARCH model generator
 function generate_garch(N, ω, α, β)
