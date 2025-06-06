@@ -17,10 +17,10 @@ using ..RPMotifs
 
 function main()
     # Parameters
-    Nf = 1000
+    Nf = 2000
     
-    rr_resol = 2
-    rrs = range(0.1, 0.91, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
+    rr_resol = 100
+    rrs = range(0.0001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
     
     # 3D autoregressive model connection matrix
@@ -131,16 +131,15 @@ function main()
     # Plot histograms comparing systems for each recurrence rate
     for rr_idx in 1:rr_resol
         histogram_data = [
-            RPC[i, rr_idx, :] for i in 1:n_systems
+            RPC[:, rr_idx, i] for i in 1:len_RPC
         ]
   
         # Plot histograms
-        save_patterns_histograms(histogram_data, didj_labels, 
+        save_histograms(histogram_data, didj_labels, 
             systems, 
             "Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
             figures_path, 
-            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).png"; 
-            color_scheme=colors
+            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).png"
         )
 
     end
