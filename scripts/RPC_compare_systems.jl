@@ -17,7 +17,7 @@ using ..RPMotifs
 
 function main()
     # Parameters
-    Nf = 1000
+    Nf = 500
     
     rr_resol = 10
     rrs = range(0.0001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
@@ -72,10 +72,10 @@ function main()
 
     lam_results = zeros(length(systems), rr_resol) 
 
-    di_dj_tuples =[(1, -1), (1, 0), (1, 1)] 
+    di_dj_tuples =[(1, -1), (1, 0), (1, 1), (1, -1), (2, 0), (2, 2), (3, -3), (3, 0), (3, 3)] 
 
     len_RPC = length(di_dj_tuples)
-    didj_labels = [L"\Delta i=%$(shift[1]), \Delta j=%$(shift[2])" for shift in di_dj_tuples]
+    didj_labels = [L" w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(shift[1])} \delta_{\Delta j, %$(shift[2])}" for shift in di_dj_tuples]
     
     RPC = zeros(length(systems), rr_resol, len_RPC) # Initialize RPC array
 
@@ -146,28 +146,31 @@ function main()
     end
 
     
-    n_panels = size(RPC, 3)
-    labels = [sys_info[1] for sys_info in systems]
+    n_panels = n_systems
+    
+    #labels = [sys_info[1] for sys_info in systems]
 
-    plt = plot(layout = (n_panels, 1), size = (500, 180 * n_panels), dpi = 300)
+    plt = plot(layout = (n_panels, 1), size = (500, 150 * n_panels), dpi = 300)
 
-    letters_annotation = [L"(%c)" % ('a' + i - 1) for i in 1:n_panels]
+    letters_annotation = ["(a)"; "(b)"; "(c)"; "(d)"; "(e)"; "(f)"; "g"]
    
     for i in 1:n_panels
-        for k in 1:n_systems
-            plot!(plt[i], rrs, RPC[k, :, i],
-                label = (i == 1 ? labels[k] : ""),  # Show legend only on first panel
+        for k in 1:len_RPC
+            plot!(plt[i], rrs, RPC[i, :, k],
+                label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
                 color = colors[k])
         end
         xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
         ylabel = L"RPC"
-        annotation_text = L"%$(letters_annotation[i]) \ w_{%$(di_dj_tuples[i][1]),%$(di_dj_tuples[i][2])}=1"
+        annotation_text = L"%$(letters_annotation[i])"# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
         plot!(plt[i],
             xlabel = xlabel,
             ylabel = ylabel,
-            annotation = (0.0, 0.95, annotation_text, :left, 10, :black),
-            legend = (i == 1 ? :topright : false),
+            annotation = (-0.125, 0.95, annotation_text),
+            legend = (i == 1 ? :topleft : false),
+            top_margin = (i == 1 ? 0*Plots.mm : -1*Plots.mm),
             grid = false,
+            ylims= (-0.3, 1.1),
             frame_style = :box)
     end
 
@@ -175,23 +178,25 @@ function main()
     savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.png"))
     # Plot all systems in the same plot, each system in a panel (subplot) in a different row
    
-    plt = plot(layout = (n_panels, 1), size = (600, 180 * n_panels), dpi = 300)
+    plt = plot(layout = (n_panels, 1), size = (500, 150 * n_panels), dpi = 300)
     for i in 1:n_panels
-        for k in 1:n_systems
-            plot!(plt[i], rrs, RPC[k, :, i],
-                label = (i == 1 ? labels[k] : ""),  # Show legend only on first panel
+        for k in 1:len_RPC
+            plot!(plt[i], rrs, RPC[i, :, k],
+                label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
                 color = colors[k])
         end
         xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
         ylabel = L"RPC"
-        annotation_text = L"%$(letters_annotation[i]) \ w_{%$(di_dj_tuples[i][1]),%$(di_dj_tuples[i][2])}=1"
+        annotation_text = L"%$(letters_annotation[i])"# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
         plot!(plt[i],
             xlabel = xlabel,
             ylabel = ylabel,
-            annotation = (0.0, 0.95, annotation_text, :left, 10, :black),
-            legend = (i == 1 ? :topright : false),
+            annotation = (-0.125, 0.95, annotation_text),
+            legend = (i == 1 ? :topleft : false),
             grid = false,
             xscale=:log10,
+            top_margin = (i == 1 ? 0*Plots.mm : -1*Plots.mm),
+            ylims= (-0.3, 1.1),
             frame_style = :box)
     end
 
