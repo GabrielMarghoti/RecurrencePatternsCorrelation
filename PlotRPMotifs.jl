@@ -1,6 +1,7 @@
 module PlotRPMotifs
 
 using Plots
+using ColorSchemes
 using Measures
 using PlotUtils
 using LaTeXStrings
@@ -279,9 +280,13 @@ function save_histograms(data, labels, systems, title, save_path, filename)
     
         bar_data = zeros(num_quantifiers*num_systems)
         x_axis_values = zeros(num_quantifiers*num_systems)
-        color_bars_plot = Vector{RGB}(undef, num_quantifiers*num_systems)  # Corrected initialization
+
+        # Use a scientific color palette, e.g., ColorSchemes.tableau10 or ColorSchemes.Set1
+        palette = get(ColorSchemes.tableau10, range(0, stop=1, length=num_quantifiers))
+        color_bars_plot = [palette[q] for i in 1:num_systems, q in 1:num_quantifiers]
+        color_bars_plot = vec(color_bars_plot)
     
-        q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.1
+        q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.2
         group_q_label = Vector{String}(undef, num_quantifiers*num_systems)
     
         for (i, (system_name, system, params)) in enumerate(systems)
@@ -300,11 +305,12 @@ function save_histograms(data, labels, systems, title, save_path, filename)
             xlabel="System", ylabel=L"RPC",
             group=group_q_label,  # Correct grouping
             title=title,
-            bar_width=0.08, legend=:topright, size=(1000, 500), dpi=300,
+            bar_width=0.15, size=(100+60*num_systems, 400), dpi=300,
             color=color_bars_plot, xticks=(1:num_systems, system_names),
             frame_style=:box, grid=false,
-            bottom_margin = 5mm,
-            left_margin = 5mm,
+            bottom_margin = 4mm,
+            left_margin = 2mm,
+            legend=:topleft,
         )
     
         savefig(plt, joinpath(save_path, filename))

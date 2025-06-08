@@ -17,9 +17,9 @@ using ..RPMotifs
 
 function main()
     # Parameters
-    Nf = 2000
+    Nf = 1000
     
-    rr_resol = 100
+    rr_resol = 10
     rrs = range(0.0001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
     
@@ -60,8 +60,8 @@ function main()
 
     # Output directories
     time_series_path = "data/time_series"
-    data_path    = "data/RPC_global/Nf$(Nf)_rr_reso$(rr_resol)/"
-    figures_path = "figures/RPC_global_$(today())/Nf$(Nf)_rr_reso$(rr_resol)/"
+    data_path    = "data/RPC_compare_sys_global/Nf$(Nf)_rr_reso$(rr_resol)/"
+    figures_path = "figures/RPC_compare_sys_global_$(today())/Nf$(Nf)_rr_reso$(rr_resol)/"
 
     mkpath(data_path)
     mkpath(figures_path)
@@ -72,7 +72,7 @@ function main()
 
     lam_results = zeros(length(systems), rr_resol) 
 
-    di_dj_tuples =[(0, 1), (1, -1), (1, 0), (1, 1)] 
+    di_dj_tuples =[(1, -1), (1, 0), (1, 1)] 
 
     len_RPC = length(di_dj_tuples)
     didj_labels = [L"\Delta i=%$(shift[1]), \Delta j=%$(shift[2])" for shift in di_dj_tuples]
@@ -116,7 +116,8 @@ function main()
 
                 plot_recurrence_matrix(RP, system_name, rr_fig_path; filename="recurrence_plot.png")
                 
-                RPC[i, rr_idx, RPC_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)                
+                RPC[i, rr_idx, RPC_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)      
+
             end
         end
 
@@ -137,7 +138,7 @@ function main()
         # Plot histograms
         save_histograms(histogram_data, didj_labels, 
             systems, 
-            "Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
+            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
             figures_path, 
             "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).png"
         )
@@ -148,20 +149,24 @@ function main()
     n_panels = size(RPC, 3)
     labels = [sys_info[1] for sys_info in systems]
 
-    plt = plot(layout = (n_panels, 1), size = (600, 180 * n_panels), dpi = 300)
+    plt = plot(layout = (n_panels, 1), size = (500, 180 * n_panels), dpi = 300)
 
+    letters_annotation = [L"(%c)" % ('a' + i - 1) for i in 1:n_panels]
+   
     for i in 1:n_panels
         for k in 1:n_systems
             plot!(plt[i], rrs, RPC[k, :, i],
                 label = (i == 1 ? labels[k] : ""),  # Show legend only on first panel
                 color = colors[k])
         end
-        xlabel = i == n_panels ? "Recurrence Rate (rr)" : ""
-        ylabel = L"RPC %$(didj_labels[i])"
+        xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
+        ylabel = L"RPC"
+        annotation_text = L"%$(letters_annotation[i]) \ w_{%$(di_dj_tuples[i][1]),%$(di_dj_tuples[i][2])}=1"
         plot!(plt[i],
             xlabel = xlabel,
             ylabel = ylabel,
-            legend = (i == 1),
+            annotation = (0.0, 0.95, annotation_text, :left, 10, :black),
+            legend = (i == 1 ? :topright : false),
             grid = false,
             frame_style = :box)
     end
@@ -170,7 +175,6 @@ function main()
     savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.png"))
     # Plot all systems in the same plot, each system in a panel (subplot) in a different row
    
-   
     plt = plot(layout = (n_panels, 1), size = (600, 180 * n_panels), dpi = 300)
     for i in 1:n_panels
         for k in 1:n_systems
@@ -178,12 +182,14 @@ function main()
                 label = (i == 1 ? labels[k] : ""),  # Show legend only on first panel
                 color = colors[k])
         end
-        xlabel = i == n_panels ? "Recurrence Rate (rr)" : ""
-        ylabel = L"RPC %$(didj_labels[i])"
+        xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
+        ylabel = L"RPC"
+        annotation_text = L"%$(letters_annotation[i]) \ w_{%$(di_dj_tuples[i][1]),%$(di_dj_tuples[i][2])}=1"
         plot!(plt[i],
             xlabel = xlabel,
             ylabel = ylabel,
-            legend = (i == 1),
+            annotation = (0.0, 0.95, annotation_text, :left, 10, :black),
+            legend = (i == 1 ? :topright : false),
             grid = false,
             xscale=:log10,
             frame_style = :box)
