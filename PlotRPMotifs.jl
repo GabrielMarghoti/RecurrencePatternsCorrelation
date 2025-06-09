@@ -298,7 +298,55 @@ function save_histograms(data, labels, systems, title, save_path, filename)
     
         plt = bar(
             x_axis_values, bar_data,
-            xlabel=L"System", ylabel=L"RPC",
+            xlabel="System", ylabel=L"RPC",
+            group=group_q_label,  # Correct grouping
+            title=title,
+            bar_width=0.15, size=(100+60*num_systems, 300), dpi=300,
+            color=color_bars_plot, xticks=(1:num_systems, system_names),
+            frame_style=:box, grid=false,
+            bottom_margin = 4mm,
+            left_margin = 2mm,
+            legend=:topleft,
+        )
+    
+        savefig(plt, joinpath(save_path, filename))
+    end
+    
+
+function save_histograms(data, labels, systems, title, save_path, filename)
+
+        if !isdir(save_path)
+            mkdir(save_path)
+        end
+    
+        num_systems = length(systems)
+        num_quantifiers = length(labels)
+
+        system_names = [system[1] for system in systems]
+        colors = distinguishable_colors(num_systems)  # Assign distinct colors to each system
+    
+        bar_data = zeros(num_quantifiers*num_systems)
+        x_axis_values = zeros(num_quantifiers*num_systems)
+
+        color_bars_plot = Vector{RGB}(undef, num_quantifiers*num_systems)  # Corrected initialization
+    
+        q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.2
+        group_q_label = Vector{String}(undef, num_quantifiers*num_systems)
+    
+        for (i, (system_name, system, params)) in enumerate(systems)
+            for q in 1:num_quantifiers
+    
+                bar_data[(i-1)*num_quantifiers+q] = data[q][i] 
+                color_bars_plot[(i-1)*num_quantifiers+q] = colors[q]
+    
+                x_axis_values[(i-1)*num_quantifiers+q] = i + q_offsets[q]
+                group_q_label[(i-1)*num_quantifiers+q] = labels[q]
+            end
+        end
+    
+        plt = bar(
+            x_axis_values, bar_data,
+            xlabel="System", ylabel=L"RPC",
             group=group_q_label,  # Correct grouping
             title=title,
             bar_width=0.15, size=(100+60*num_systems, 300), dpi=300,

@@ -15,12 +15,32 @@ using ..PlotRPMotifs
 include("../RPMotifs.jl")
 using ..RPMotifs
 
+function diag_marker(ratio=1.0)
+    x = ratio*[-0.5, 0.5]
+    y = ratio*[-0.5, 0.5]
+    return Shape(x, y)
+end
+
+
+function anti_diag_marker(ratio=1.0)
+    x = ratio*[-0.5, 0.5]
+    y = ratio*[0.5, -0.5]
+    return Shape(x, y)
+end
+
+
+function vert_marker(ratio=1.0)
+    x = ratio*[0.0, 0.0]
+    y = ratio*[-0.1, 1.0]
+    return Shape(x, y)
+end
+
 function main()
     # Parameters
-    Nf = 500
+    Nf = 5000
     
-    rr_resol = 10
-    rrs = range(0.0001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
+    rr_resol = 100
+    rrs = range(0.001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
     
     # 3D autoregressive model connection matrix
@@ -31,15 +51,15 @@ function main()
     # Systems to analyze
     systems = [
         #("Tipping point sde", [[0.1, 0.004], 0.1], 1),
-        ("UWN", nothing, 1),
-       # ("GWN", nothing, 1),
-        ("AR (0.6)", 0.6, 1),
+        #("UWN", nothing, 1),
+        ("GWN", nothing, 1),
+        ("AR (0.8)", 0.8, 1),
         ("AR (0.99)", 0.99, 1),
        # ("NAR (0, 0.99)", [0.0; 0.99], 1),
         ("Logistic", 4.0, 1),
        # ("Logistic", 3.678, 1),
         ("Lorenz", [[10.0, 28.0, 8 / 3], 0.05], [1,2,3]),
-        ("Rossler", [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
+       # ("Rossler", [[0.2, 0.2, 5.7], 0.5], [1,2,3]),
        # ("AR(2)", [[0.7, -0.2], 0.5], 1),  # AR(2) with noise variance
        # ("Lorenz (x)", [[10.0, 28.0, 8 / 3], 0.05], 1),
        # ("Lorenz (z)", [[10.0, 28.0, 8 / 3], 0.05], 3),
@@ -72,7 +92,7 @@ function main()
 
     lam_results = zeros(length(systems), rr_resol) 
 
-    di_dj_tuples =[(1, -1), (1, 0), (1, 1), (1, -1), (2, 0), (2, 2), (3, -3), (3, 0), (3, 3)] 
+    di_dj_tuples =[(0, 1), (1, -1), (1, 1), (0, 2), (2, -2), (2, 2), (0, 4), (4, -4), (4, 4)] 
 
     len_RPC = length(di_dj_tuples)
     didj_labels = [L" w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(shift[1])} \delta_{\Delta j, %$(shift[2])}" for shift in di_dj_tuples]
@@ -123,26 +143,44 @@ function main()
 
     end
 
+    @save joinpath(data_path, "rr_resol$(rr_resol)_morans_I.jld2") rrs RPC systems di_dj_tuples didj_labels
+
 
 
     n_systems = length(systems)
-    colors = cgrad(:jet1, n_systems, categorical=true)
+
+    colors = [:blue, :blue, :blue,  :green, :green, :green, :red, :red, :red] #cgrad(:jet1, len_RPC, categorical=true)
+    lws = [2.5, 2.5, 2.5,1.7,1.7,1.7,1,1,1] # Line widths for each RPC type
+    markers = [vert_marker(1.0), anti_diag_marker(1.0), diag_marker(1.0), vert_marker(1.5), anti_diag_marker(1.5), diag_marker(1.5), vert_marker(2.0), anti_diag_marker(2.0), diag_marker(2.0)]
 
     
     # Plot histograms comparing systems for each recurrence rate
     for rr_idx in 1:rr_resol
         histogram_data = [
-            RPC[:, rr_idx, i] for i in 1:len_RPC
+            RPC[:, rr_idx, i] for i in 1:3
         ]
   
         # Plot histograms
-        save_histograms(histogram_data, didj_labels, 
+        save_histograms(histogram_data, didj_labels[1:3], 
             systems, 
             "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
             figures_path, 
             "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).png"
         )
-
+        # Plot histograms
+        save_histograms(histogram_data, didj_labels[1:3], 
+            systems, 
+            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
+            figures_path, 
+            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).pdf"
+        )
+        # Plot histograms
+        save_histograms(histogram_data, didj_labels[1:3], 
+            systems, 
+            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
+            figures_path, 
+            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).svg"
+        )
     end
 
     
@@ -150,57 +188,37 @@ function main()
     
     #labels = [sys_info[1] for sys_info in systems]
 
-    plt = plot(layout = (n_panels, 1), size = (500, 150 * n_panels), dpi = 300)
+    plt = plot(layout =  grid(n_panels, 1, heights=[0.25 ,0.15, 0.15, 0.15, 0.15, 0.15]), size = (550, 150 * n_panels), dpi = 300)
 
-    letters_annotation = ["(a)"; "(b)"; "(c)"; "(d)"; "(e)"; "(f)"; "g"]
+    letters_annotation = ["(a)"; "(b)"; "(c)"; "(d)"; "(e)"; "(f)"; "(g)"; "(h)"]
    
     for i in 1:n_panels
         for k in 1:len_RPC
             plot!(plt[i], rrs, RPC[i, :, k],
                 label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
-                color = colors[k])
+                color = colors[k], marker= markers[k], markercolor = colors[k],lw=lws[k])
         end
         xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
         ylabel = L"RPC"
-        annotation_text = L"%$(letters_annotation[i])"# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
+        annotation_text = letters_annotation[i]# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
         plot!(plt[i],
             xlabel = xlabel,
             ylabel = ylabel,
-            annotation = (-0.125, 0.95, annotation_text),
-            legend = (i == 1 ? :topleft : false),
-            top_margin = (i == 1 ? 0*Plots.mm : -1*Plots.mm),
+            annotation = (-0.135, 1.15, annotation_text),
+            legend = (i == 1 ? :outertop : false),
+            legendcolumns=3,
+            top_margin = (i == 1 ? 0*Plots.mm : -4*Plots.mm),
+            left_margin = 6*Plots.mm,
             grid = false,
-            ylims= (-0.3, 1.1),
+            ylims= (-0.4, 1.1),
             frame_style = :box)
     end
 
     mkpath(figures_path)
     savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.png"))
-    # Plot all systems in the same plot, each system in a panel (subplot) in a different row
-   
-    plt = plot(layout = (n_panels, 1), size = (500, 150 * n_panels), dpi = 300)
-    for i in 1:n_panels
-        for k in 1:len_RPC
-            plot!(plt[i], rrs, RPC[i, :, k],
-                label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
-                color = colors[k])
-        end
-        xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
-        ylabel = L"RPC"
-        annotation_text = L"%$(letters_annotation[i])"# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
-        plot!(plt[i],
-            xlabel = xlabel,
-            ylabel = ylabel,
-            annotation = (-0.125, 0.95, annotation_text),
-            legend = (i == 1 ? :topleft : false),
-            grid = false,
-            xscale=:log10,
-            top_margin = (i == 1 ? 0*Plots.mm : -1*Plots.mm),
-            ylims= (-0.3, 1.1),
-            frame_style = :box)
-    end
+    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.pdf"))
+    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.svg"))
 
-    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels_logx.png"))
 
     #= Scatter plot for :DET
     plt_det = scatter(det_results', RPC_diag',
