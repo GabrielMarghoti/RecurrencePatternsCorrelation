@@ -346,7 +346,7 @@ function save_histograms(data, labels, systems, title, save_path, filename)
     
         plt = bar(
             x_axis_values, bar_data,
-            xlabel="System", ylabel=L"RPC",
+            xlabel="", ylabel=L"RPC",
             group=group_q_label,  # Correct grouping
             title=title,
             bar_width=0.15, size=(100+60*num_systems, 300), dpi=300,

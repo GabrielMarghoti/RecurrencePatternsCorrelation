@@ -16,15 +16,15 @@ include("../RPMotifs.jl")
 using ..RPMotifs
 
 function diag_marker(ratio=1.0)
-    x = ratio*[-0.5, 0.5]
-    y = ratio*[-0.5, 0.5]
+    x = ratio*[-0.1, 1.0]
+    y = ratio*[-0.1, 1.0]
     return Shape(x, y)
 end
 
 
 function anti_diag_marker(ratio=1.0)
-    x = ratio*[-0.5, 0.5]
-    y = ratio*[0.5, -0.5]
+    x = ratio*[-0.1, 1.0]
+    y = ratio*[0.1, -1.0]
     return Shape(x, y)
 end
 
@@ -37,8 +37,10 @@ end
 
 function main()
     # Parameters
-    Nf = 5000
+    Nf = 2000
     
+    load_cache = true
+
     rr_resol = 100
     rrs = range(0.001, 0.999, rr_resol) #10 .^ range(-3, -0.001, rr_resol)
     rr_resol = length(rrs)
@@ -68,7 +70,7 @@ function main()
        # ("AR 0.8", nothing, 0.8, 1),
        # ("3D AR", A, 1),
        # ("Rossler (x)", [[0.2, 0.2, 5.7], 0.5], 1),
-        ("Sine", 0.11347, [1,2]),
+        ("Sine", 0.01, [1]),
         #("GARCH", nothing, 
         #[0.01,
         #[0.1, 0.05],  # ARCH(2)
@@ -99,52 +101,57 @@ function main()
     
     RPC = zeros(length(systems), rr_resol, len_RPC) # Initialize RPC array
 
-    for (i, system_tuple) in enumerate(systems)
-        system_name, params, component = system_tuple
-        
-        println("Analyzing $system_name system...")
 
-        system_path = figures_path*"$(system_name)_$(params)"
-        mkpath(system_path)
-        
-        time_series = generate_time_series(system_name, params, Nf, component) # Generate time series
 
-        if size(time_series, 2) == 1
-            #println("   Performing Pecuzal embedding for 1D time series")
-            embedded_time_series = pecuzal_embedding(time_series; max_cycles=7)[1]
-        else
-            embedded_time_series = time_series
-        end
-        
-        file_path = data_path * "rr_resol$(rr_resol)_morans_I_$(system_name).jld2"
-        #if isfile(file_path)
-        #    @load  file_path rrs RPC_diag RPC_anti_diag RPC_vert_line RPC_4sides RPC_8sides  det_results lam_results
-        for rr_idx in 1:rr_resol
+    if load_cache==false
+        @load joinpath(data_path, "data.jld2") rrs RPC systems di_dj_tuples didj_labels
+    else
+        for (i, system_tuple) in enumerate(systems)
+            system_name, params, component = system_tuple
+            
+            println("Analyzing $system_name system...")
 
-            rr_fig_path = joinpath(system_path, "rr$(rrs[rr_idx])/")
-            rr_data_path = joinpath(data_path, "rr$(rrs[rr_idx])/")
-            mkpath(rr_data_path)
+            system_path = figures_path*"$(system_name)_$(params)"
+            mkpath(system_path)
+            
+            time_series = generate_time_series(system_name, params, Nf, component) # Generate time series
 
-            RP = RecurrenceMatrix(StateSpaceSet(embedded_time_series), GlobalRecurrenceRate(rrs[rr_idx]); metric = Euclidean(), parallel = true)
-            _rqa_sys = rqa(RP)
-
-            det_results[i, rr_idx] = _rqa_sys[:DET]
-            lam_results[i, rr_idx] = _rqa_sys[:LAM]
-            for (RPC_idx, di_dj) in enumerate(di_dj_tuples)
-                di, dj = di_dj
-                RPC_name = "RPC_di$(di)_dj$(dj)"
-
-                plot_recurrence_matrix(RP, system_name, rr_fig_path; filename="recurrence_plot.png")
-                
-                RPC[i, rr_idx, RPC_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)      
-
+            if size(time_series, 2) == 1
+                #println("   Performing Pecuzal embedding for 1D time series")
+                embedded_time_series = pecuzal_embedding(time_series; max_cycles=7)[1]
+            else
+                embedded_time_series = time_series
             end
+            
+            file_path = data_path * "rr_resol$(rr_resol)_morans_I_$(system_name).jld2"
+            #if isfile(file_path)
+            #    @load  file_path rrs RPC_diag RPC_anti_diag RPC_vert_line RPC_4sides RPC_8sides  det_results lam_results
+            for rr_idx in 1:rr_resol
+
+                rr_fig_path = joinpath(system_path, "rr$(rrs[rr_idx])/")
+                rr_data_path = joinpath(data_path, "rr$(rrs[rr_idx])/")
+                mkpath(rr_data_path)
+
+                RP = RecurrenceMatrix(StateSpaceSet(embedded_time_series), GlobalRecurrenceRate(rrs[rr_idx]); metric = Euclidean(), parallel = true)
+                _rqa_sys = rqa(RP)
+
+                det_results[i, rr_idx] = _rqa_sys[:DET]
+                lam_results[i, rr_idx] = _rqa_sys[:LAM]
+                for (RPC_idx, di_dj) in enumerate(di_dj_tuples)
+                    di, dj = di_dj
+                    RPC_name = "RPC_di$(di)_dj$(dj)"
+
+                    plot_recurrence_matrix(RP, system_name, rr_fig_path; filename="recurrence_plot.png")
+                    
+                    RPC[i, rr_idx, RPC_idx] = morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)      
+
+                end
+            end
+
         end
 
+        @save joinpath(data_path, "data.jld2") rrs RPC systems di_dj_tuples didj_labels
     end
-
-    @save joinpath(data_path, "rr_resol$(rr_resol)_morans_I.jld2") rrs RPC systems di_dj_tuples didj_labels
-
 
 
     n_systems = length(systems)
@@ -196,7 +203,7 @@ function main()
         for k in 1:len_RPC
             plot!(plt[i], rrs, RPC[i, :, k],
                 label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
-                color = colors[k], marker= markers[k], markercolor = colors[k],lw=lws[k])
+                color = colors[k], marker= markers[k], markercolor = colors[k],lw=lws[k], la=0.9)
         end
         xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
         ylabel = L"RPC"

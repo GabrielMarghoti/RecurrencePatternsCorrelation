@@ -137,7 +137,7 @@ export morans_I, local_morans_I,
             trajectory = generate_logistic_map(params, Nf) # Generate system trajectory
             time_series = trajectory
         elseif occursin("Sine", system_name)
-            trajectory  = [sin.(2π/3.3 * params * range(1, Nf)) cos.(2π/3.3 * params * range(1, Nf))]
+            trajectory  = [sin.(2π* params * range(1, Nf)) cos.(2π * params * range(1, Nf))]
             time_series = trajectory[:, component]
         
         elseif system_name == "GARCH"
