@@ -101,10 +101,10 @@ function main()
     
     RPC = zeros(length(systems), rr_resol, len_RPC) # Initialize RPC array
 
+    cache_path = joinpath(data_path, "data.jld2")
 
-
-    if load_cache==false
-        @load joinpath(data_path, "data.jld2") rrs RPC systems di_dj_tuples didj_labels
+    if isfile(cache_path)
+        @load cache_path rrs RPC systems di_dj_tuples didj_labels
     else
         for (i, system_tuple) in enumerate(systems)
             system_name, params, component = system_tuple
@@ -150,82 +150,109 @@ function main()
 
         end
 
-        @save joinpath(data_path, "data.jld2") rrs RPC systems di_dj_tuples didj_labels
+        @save cache_path rrs RPC systems di_dj_tuples didj_labels
     end
 
 
+    # 1. Group motifs by delay magnitude
+    di_dj_tuples = [(0, 1), (1, -1), (1, 1), (0, 2), (2, -2), (2, 2), (0, 4), (4, -4), (4, 4)]
+    delay_groups = [1:3, 4:6, 7:9] # Indices into di_dj_tuples for each delay magnitude
+    n_delays = length(delay_groups)
     n_systems = length(systems)
 
-    colors = [:blue, :blue, :blue,  :green, :green, :green, :red, :red, :red] #cgrad(:jet1, len_RPC, categorical=true)
-    lws = [2.5, 2.5, 2.5,1.7,1.7,1.7,1,1,1] # Line widths for each RPC type
-    markers = [vert_marker(1.0), anti_diag_marker(1.0), diag_marker(1.0), vert_marker(1.5), anti_diag_marker(1.5), diag_marker(1.5), vert_marker(2.0), anti_diag_marker(2.0), diag_marker(2.0)]
+    # Labels for the lines within each subplot
+    motif_labels = [L"Vertical", L"Anti-diag.", L"Diagonal"]
 
-    
-    # Plot histograms comparing systems for each recurrence rate
-    for rr_idx in 1:rr_resol
-        histogram_data = [
-            RPC[:, rr_idx, i] for i in 1:3
-        ]
-  
-        # Plot histograms
-        save_histograms(histogram_data, didj_labels[1:3], 
-            systems, 
-            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
-            figures_path, 
-            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).png"
-        )
-        # Plot histograms
-        save_histograms(histogram_data, didj_labels[1:3], 
-            systems, 
-            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
-            figures_path, 
-            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).pdf"
-        )
-        # Plot histograms
-        save_histograms(histogram_data, didj_labels[1:3], 
-            systems, 
-            "",#"Recurrence Patterns Correlation for rr=$(round(rrs[rr_idx]; digits=2))", 
-            figures_path, 
-            "bar_plot_rr$(round(rrs[rr_idx]; digits=2)).svg"
-        )
-    end
+    # Define colors and markers for the three motif types (Vertical, Anti-diag, Diagonal)
+    # This will be repeated for each delay group.
+    colors_per_motif = [:blue, :red, :green]
+    markers_per_motif = [vert_marker(1.5), anti_diag_marker(1.5), diag_marker(1.5)]
 
-    
-    n_panels = n_systems
-    
-    #labels = [sys_info[1] for sys_info in systems]
+    # 2. Define the new layout: n_systems rows, n_delays columns
+    plt = plot(layout = grid(n_systems, n_delays),
+            size = (400 * n_delays, 200 * n_systems),
+            dpi = 300,
+            link = :y) # Link y-axes for easier comparison
 
-    plt = plot(layout =  grid(n_panels, 1, heights=[0.25 ,0.15, 0.15, 0.15, 0.15, 0.15]), size = (550, 150 * n_panels), dpi = 300)
+    letters_annotation = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"]
 
-    letters_annotation = ["(a)"; "(b)"; "(c)"; "(d)"; "(e)"; "(f)"; "(g)"; "(h)"]
-   
-    for i in 1:n_panels
-        for k in 1:len_RPC
-            plot!(plt[i], rrs, RPC[i, :, k],
-                label = (i == 1 ? didj_labels[k] : ""),  # Show legend only on first panel
-                color = colors[k], marker= markers[k], markercolor = colors[k],lw=lws[k], la=0.9)
+    # 3. Create the nested plotting loop
+    p_idx = 1
+    for i in 1:n_systems # Loop over rows (systems)
+        for j in 1:n_delays # Loop over columns (delay magnitudes)
+            
+            is_top_row = (i == 1)
+            is_bottom_row = (i == n_systems)
+            is_leftmost_col = (j == 1)
+            
+            # Get the indices for the current delay group
+            current_group_indices = delay_groups[j]
+            
+            # Plot the 3 lines for the current system and delay group
+            for (k_motif, k_rpc) in enumerate(current_group_indices)
+                plot!(plt, subplot = p_idx,
+                    rrs, RPC[i, :, k_rpc],
+                    label = "", # We will create a custom legend
+                    color = colors_per_motif[k_motif],
+                    marker = markers_per_motif[k_motif],
+                    markercolor = colors_per_motif[k_motif],
+                    markersize = 2,
+                    strokewidth = 1.5,
+                    alpha = 0.9)
+            end
+            
+            # Add a title for each column, only on the top row
+            column_title = is_top_row ? "Delay $(2^(j-1))" : ""
+            
+            # Add labels only to the edges
+            xlabel = is_bottom_row ? L"Recurrence \ Rate \ (rr)" : ""
+            ylabel = is_leftmost_col ? "RPC" : ""
+            
+            # Get system name for row annotation
+            system_name = systems[i][1]
+
+            # Apply attributes to the subplot
+            plot!(plt, subplot = p_idx,
+                title = column_title,
+                titlefontsize = 10,
+                xlabel = xlabel,
+                ylabel = ylabel,
+                xtickfontsize = 8,
+                ytickfontsize = 8,
+                grid = false,
+                ylims = (-0.4, 1.1),
+                framestyle = :box)
+
+            # Annotate with system name on the first column
+            if is_leftmost_col
+                annotate!(plt, subplot=p_idx,
+                        -0.3, 1.3, text(letters_annotation[i] * " " * system_name, :left, 10))
+            end
+
+            p_idx += 1
         end
-        xlabel = i == n_panels ? L"Recurrence \ Rate \ (rr)" : ""
-        ylabel = L"RPC"
-        annotation_text = letters_annotation[i]# \ w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(di_dj_tuples[i][1])} \delta_{\Delta j, %$(di_dj_tuples[i][2])}"
-        plot!(plt[i],
-            xlabel = xlabel,
-            ylabel = ylabel,
-            annotation = (-0.135, 1.15, annotation_text),
-            legend = (i == 1 ? :outertop : false),
-            legendcolumns=3,
-            top_margin = (i == 1 ? 0*Plots.mm : -4*Plots.mm),
-            left_margin = 6*Plots.mm,
-            grid = false,
-            ylims= (-0.4, 1.1),
-            frame_style = :box)
     end
 
-    mkpath(figures_path)
-    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.png"))
-    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.pdf"))
-    savefig(plt, joinpath(figures_path, "all_systems_RPC_vs_rr_panels.svg"))
+    # --- Create a custom legend at the top of the entire plot ---
+    # This is a bit of a "hack" in Plots.jl: create invisible series with the desired labels.
+    # We add them to the first subplot and use the :outertopright legend position.
+    for k in 1:length(motif_labels)
+        plot!(plt, subplot=1, [NaN], [NaN], # Plot nothing
+            label=motif_labels[k],
+            color=colors_per_motif[k],
+            marker=markers_per_motif[k],
+            markercolor=colors_per_motif[k],
+            lw=1.5
+        )
+    end
+    plot!(plt, subplot=1, legend=:outertop, legendcolumns=3, legendfontsize=10, framestyle=:none)
+    plot!(plt, top_margin = 15Plots.mm) # Add space for the legend and titles
 
+
+    # Save the final plot
+    mkpath(figures_path)
+    savefig(plt, joinpath(figures_path, "systems_by_delay_columns.png"))
+    savefig(plt, joinpath(figures_path, "systems_by_delay_columns.pdf"))
 
     #= Scatter plot for :DET
     plt_det = scatter(det_results', RPC_diag',

@@ -82,51 +82,69 @@ function main()
 
     mkpath(data_path)
     mkpath(figures_path)
-    
+    di_range=1:4
+    dj_range=-4:4
 
+    panels_letters = [
+        "(aa)" "(ab)" "(ac)" "(ad)";
+        "(ba)" "(bb)" "(bc)" "(bd)";
+        "(ca)" "(cb)" "(cc)" "(cd)";
+        "(da)" "(db)" "(dc)" "(dd)";
+        "(ea)" "(eb)" "(ec)" "(ed)";
+        "(fa)" "(fb)" "(fc)" "(fd)";
+        "(ga)" "(gb)" "(gc)" "(gd)";
+        "(ha)" "(hb)" "(hc)" "(hd)";
+        "(ia)" "(ib)" "(ic)" "(id)"
+    ]
 
-    for di=0:4
-        for dj=-4:4
+    for di=di_range
+        for dj=dj_range
             if di == 0 && dj == 0
                 continue # Skip the case where both di and dj are zero
             end
             RPC_name = "RPC_di$(di)_dj$(dj)"
 
-            RPC = zeros(n_ics, Nf)
+            # Save the RPC data for each (di, dj) combination
+            save_path = joinpath(data_path, "RPC_eps$(eps)_di$(di)_dj$(dj).jld2")
 
-            for ic_idx = 1:n_ics
-                
-                
-                RP = custom_recurrence_plot(time_series[ic_idx, :, :], eps; periodic=true, period=2π)
-            
-                RPC[ic_idx, :] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)
-                
-                plot_recurrence_matrix(RP, "Standard Map", figures_path; filename="recurrence_plot_"*data_files[ic_idx]*".png")
+            if isfile(save_path)
+                println("Loading cache: $save_path")
+                @load save_path RPC
+            else
+                RPC = zeros(n_ics, Nf)
 
+                for ic_idx = 1:n_ics
+                    
+                    
+                    RP = custom_recurrence_plot(time_series[ic_idx, :, :], eps; periodic=true, period=2π)
+                
+                    RPC[ic_idx, :] = local_morans_I(RP; weight_function = (Δi, Δj) -> (Δi == di && Δj == dj ? 1 : 0), Δi_range = di:di, Δj_range = dj:dj)
+                    
+                    #plot_recurrence_matrix(RP, "Standard Map", figures_path; filename="recurrence_plot_"*data_files[ic_idx]*".png")
+
+                end
             end
             plot()
             for ic_idx = 1:n_ics
                 circ = Shape(Plots.partialcircle(0, 2π))
                 # Plot bifurcation diagram with Moran's I (Diagonal) as colors
-                scatter!(time_series[ic_idx, :, 1], time_series[ic_idx, :, 2], 
-                marker_z=RPC[ic_idx, :], color=:vik, label="", ms=1.2, alpha=0.9,
+                scatter!(time_series[ic_idx, 5:end-5, 1], time_series[ic_idx, 5:end-5, 2], 
+                marker_z=RPC[ic_idx, 5:end-5], color=:vik, label="", ms=1.2, alpha=0.9,
                 strokewidth=0, markerstrokealpha=0, markerstrokecolor=nothing, markershape=circ,
                 xlabel=L"x", ylabel=L"y", widen=false,
                 xticks=([0, π/2, π, 3π/2, 2π], [L"0", L"π/2", L"π", L"3π/2", L"2π"]),
                 yticks=([0, π/2, π, 3π/2, 2π], [L"0", L"π/2", L"π", L"3π/2", L"2π"]),
-                colorbar_title=L"lRPC",
-                clims=(-0.1, 0.9),
-                size=(800, 600), dpi=300, frame_style=:box, grid=false)
+                colorbar_title="lRPC",
+                clims=(-1.0, 1.0),
+                size=(500, 400), dpi=200, frame_style=:box, grid=false)
             end
             xlabel!("x")
             ylabel!("y")
-            title!(L" w_{\Delta i, \Delta j}= \delta _{\Delta i,%$(di)} \delta_{\Delta j, %$(dj)}")
+            annotate!(0, 2π-0.25, text("$(panels_letters[end-(dj-dj_range[1]+1)+1, di-di_range[1]+1])"*L" \ w_{Δi, Δj} = δ_{Δi, %$di} δ_{Δj, %$dj}", :left, 12, :black))
             savefig(joinpath(figures_path, "standard_map_eps$(eps)"*RPC_name*".png"))
             savefig(joinpath(figures_path, "standard_map_eps$(eps)"*RPC_name*".svg"))
             savefig(joinpath(figures_path, "standard_map_eps$(eps)"*RPC_name*".pdf"))
 
-            # Save the RPC data for each (di, dj) combination
-            save_path = joinpath(data_path, "RPC_eps$(eps)_di$(di)_dj$(dj).jld2")
             @save save_path RPC
         end
     end
