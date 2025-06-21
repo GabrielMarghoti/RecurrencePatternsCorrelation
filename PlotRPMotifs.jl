@@ -7,6 +7,9 @@ using LaTeXStrings
 
 using FileIO
 
+gr() 
+default(fontfamily="Computer Modern", linewidth=2, label=nothing, grid=false, framestyle=:box)
+
 export plot, 
        plot_motifs_transition_times, plot_motifs_transition_times_GIF,
        plot_motifs_transition_joint_prob, plot_motifs_transition_joint_prob_GIF,
@@ -17,7 +20,57 @@ export plot,
        plot_shared_xaxis_scatter,
        plot_quantifier_histogram,
        save_histograms,
-       save_patterns_histograms
+       save_patterns_histograms,
+       checkerboard_marker
+
+function checkerboard_marker(binary_matrix::AbstractMatrix{<:Number}; marker_size::Real=1.0)
+    # Get the dimensions of the checkerboard grid
+    # THIS LINE IS NOW SAFE because we are not using a variable named `size`.
+    (rows, cols) = size(binary_matrix)
+    
+    # If the matrix is empty, return an empty shape
+    if rows == 0 || cols == 0
+        return Shape([], [])
+    end
+
+    # Calculate the dimensions of each small square using the renamed argument
+    square_width = marker_size / cols
+    square_height = marker_size / rows
+
+    # The marker is centered at (0,0), so the grid extends from -size/2 to +size/2
+    offset_x = -marker_size / 2
+    offset_y = -marker_size / 2
+
+    # Initialize vectors to hold the coordinates for all squares
+    all_x = Float64[]
+    all_y = Float64[]
+
+    # Iterate through the matrix to build the squares
+    for i in 1:rows
+        for j in 1:cols
+            if binary_matrix[i, j] != 0
+                # Calculate the corners of the square
+                x0 = offset_x + (j - 1) * square_width
+                x1 = x0 + square_width
+                
+                y0 = offset_y + (rows - i) * square_height
+                y1 = y0 + square_height
+
+                # Define the 4 corners of the square (plus the first to close it)
+                square_xs = [x0, x1, x1, x0, x0]
+                square_ys = [y0, y0, y1, y1, y0]
+
+                append!(all_x, square_xs)
+                append!(all_y, square_ys)
+
+                push!(all_x, NaN)
+                push!(all_y, NaN)
+            end
+        end
+    end
+
+    return Shape(all_x, all_y)
+end
 
 function plot_recurrence_matrix(RP, system_name, save_path; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
     mkpath(save_path)
@@ -265,22 +318,24 @@ function save_patterns_histograms(data, labels, systems, title, save_path, filen
     savefig(plt, joinpath(save_path, filename))
 end
 
-function save_histograms(data, labels, systems, title, save_path, filename)
+    
 
+    function save_histograms(data, systems, title, save_path, filename)
+        
         if !isdir(save_path)
             mkdir(save_path)
         end
     
         num_systems = length(systems)
-        num_quantifiers = length(labels)
+        num_quantifiers = 3
 
         system_names = [system[1] for system in systems]
-        colors = distinguishable_colors(num_systems)  # Assign distinct colors to each system
+        colors = [:black, :red, :blue]  # Assign distinct colors to each system
     
         bar_data = zeros(num_quantifiers*num_systems)
         x_axis_values = zeros(num_quantifiers*num_systems)
 
-        color_bars_plot = Vector{RGB}(undef, num_quantifiers*num_systems)  # Corrected initialization
+        color_bars_plot = fill(:black, num_quantifiers*num_systems)  # Corrected initialization
     
         q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.2
         group_q_label = Vector{String}(undef, num_quantifiers*num_systems)
@@ -292,71 +347,29 @@ function save_histograms(data, labels, systems, title, save_path, filename)
                 color_bars_plot[(i-1)*num_quantifiers+q] = colors[q]
     
                 x_axis_values[(i-1)*num_quantifiers+q] = i + q_offsets[q]
-                group_q_label[(i-1)*num_quantifiers+q] = labels[q]
+                #group_q_label[(i-1)*num_quantifiers+q] = labels[q]
             end
         end
     
         plt = bar(
             x_axis_values, bar_data,
-            xlabel="System", ylabel=L"RPC",
-            group=group_q_label,  # Correct grouping
+            xlabel="", ylabel="RPC",
             title=title,
-            bar_width=0.15, size=(100+60*num_systems, 300), dpi=300,
+            bar_width=0.14, size=(600, 300), dpi=300,
             color=color_bars_plot, xticks=(1:num_systems, system_names),
             frame_style=:box, grid=false,
-            bottom_margin = 4mm,
-            left_margin = 2mm,
+            bottom_margin = 2mm,
             legend=:topleft,
+            lw = 0.5,
+            ylims=(-0.1,1.1)
         )
-    
-        savefig(plt, joinpath(save_path, filename))
-    end
-    
-
-function save_histograms(data, labels, systems, title, save_path, filename)
-
-        if !isdir(save_path)
-            mkdir(save_path)
-        end
-    
-        num_systems = length(systems)
-        num_quantifiers = length(labels)
-
-        system_names = [system[1] for system in systems]
-        colors = distinguishable_colors(num_systems)  # Assign distinct colors to each system
-    
-        bar_data = zeros(num_quantifiers*num_systems)
-        x_axis_values = zeros(num_quantifiers*num_systems)
-
-        color_bars_plot = Vector{RGB}(undef, num_quantifiers*num_systems)  # Corrected initialization
-    
-        q_offsets = ((0:num_quantifiers-1) .- (num_quantifiers-1)/2)  * 0.2
-        group_q_label = Vector{String}(undef, num_quantifiers*num_systems)
-    
-        for (i, (system_name, system, params)) in enumerate(systems)
-            for q in 1:num_quantifiers
-    
-                bar_data[(i-1)*num_quantifiers+q] = data[q][i] 
-                color_bars_plot[(i-1)*num_quantifiers+q] = colors[q]
-    
-                x_axis_values[(i-1)*num_quantifiers+q] = i + q_offsets[q]
-                group_q_label[(i-1)*num_quantifiers+q] = labels[q]
-            end
-        end
-    
-        plt = bar(
-            x_axis_values, bar_data,
-            xlabel="", ylabel=L"RPC",
-            group=group_q_label,  # Correct grouping
-            title=title,
-            bar_width=0.15, size=(100+60*num_systems, 300), dpi=300,
-            color=color_bars_plot, xticks=(1:num_systems, system_names),
-            frame_style=:box, grid=false,
-            bottom_margin = 4mm,
-            left_margin = 2mm,
-            legend=:topleft,
+        scatter!([0.8; 0.8; 0.8], [0.87; 0.72; 0.57], mc=colors[1:3], ms=5,
+                marker = [checkerboard_marker([0 1 0; 1 0 1; 0 1 0]; marker_size=5), checkerboard_marker([0 0 1; 0 0 0; 1 0 0]; marker_size=5), checkerboard_marker([1 0 0; 0 0 0; 0 0 1]; marker_size=5)]
         )
-    
+        annotate!(1, 0.97, text(L"w_{\Delta i, \Delta j}", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.87, text("Sides", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.72, text("Diagonal", :red, :left, 10, "Computer Modern"))
+        annotate!(1, 0.57, text("Anti-diagonal", :blue, :left, 10, "Computer Modern"))
         savefig(plt, joinpath(save_path, filename))
     end
     
