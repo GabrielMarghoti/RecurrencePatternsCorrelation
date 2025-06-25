@@ -75,10 +75,9 @@ end
 function plot_recurrence_matrix(RP, system_name, save_path; xlabel="Time", ylabel="Time", filename="recurrence_plot.png")
     mkpath(save_path)
 
-    plt = heatmap(RP, 
+    plt = spy(RP, 
                     title = "$system_name", 
                     xlabel = xlabel, ylabel = ylabel,
-                    c = :binary, 
                     size = (800, 600), dpi = 200,
                     colorbar = true, frame_style = :box, 
                     aspect_ratio = 1, widen = false)
@@ -360,16 +359,16 @@ end
             frame_style=:box, grid=false,
             bottom_margin = 2mm,
             legend=:topleft,
-            lw = 0.5,
-            ylims=(-0.1,1.1)
+            lw = 0.9,
+            ylims=(-0.1,1.02)
         )
-        scatter!([0.8; 0.8; 0.8], [0.87; 0.72; 0.57], mc=colors[1:3], ms=5,
+        scatter!([0.8; 0.8; 0.8], [0.85; 0.70; 0.55], mc=colors[1:3], ms=5,
                 marker = [checkerboard_marker([0 1 0; 1 0 1; 0 1 0]; marker_size=5), checkerboard_marker([0 0 1; 0 0 0; 1 0 0]; marker_size=5), checkerboard_marker([1 0 0; 0 0 0; 0 0 1]; marker_size=5)]
         )
-        annotate!(1, 0.97, text(L"w_{\Delta i, \Delta j}", :black, :left, 10, "Computer Modern"))
-        annotate!(1, 0.87, text("Sides", :black, :left, 10, "Computer Modern"))
-        annotate!(1, 0.72, text("Diagonal", :red, :left, 10, "Computer Modern"))
-        annotate!(1, 0.57, text("Anti-diagonal", :blue, :left, 10, "Computer Modern"))
+        annotate!(0.7, 0.95, text(L"w_{\Delta i, \Delta j}", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.85, text("Sides", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.70, text("Diagonal", :red, :left, 10, "Computer Modern"))
+        annotate!(1, 0.55, text("Anti-diagonal", :blue, :left, 10, "Computer Modern"))
         savefig(plt, joinpath(save_path, filename))
     end
     

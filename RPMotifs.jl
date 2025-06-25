@@ -263,7 +263,7 @@ export morans_I, local_morans_I,
     )
         x = Matrix(x)
         N_j, N_i = size(x)
-        results = fill(NaN, N_i)
+        results = fill(0.0, N_i)
     
         for i in 1:N_i
             mean_x = mean(x[:, i])
@@ -298,9 +298,11 @@ export morans_I, local_morans_I,
                 samples += 1
             end
     
-            if W > 0
-                denominator = sum((x[:, i] .- mean_x).^2)
+            denominator = sum((x[:, i] .- mean_x).^2)
+            if denominator != 0
                 results[i] = (samples / W) * (numerator / denominator)
+            else 
+                results[i] = 0.0
             end
         end
     

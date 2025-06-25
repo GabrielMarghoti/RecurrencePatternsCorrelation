@@ -77,7 +77,7 @@ function main()
     cache_file = joinpath(data_path, "data.jld2")
 
 
-    if  false# isfile(cache_file)
+    if isfile(cache_file) && load_cache
         @load cache_file RPC systems det_results lam_results
     else
         for (i, system_tuple) in enumerate(systems)
