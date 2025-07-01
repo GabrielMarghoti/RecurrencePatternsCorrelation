@@ -200,7 +200,7 @@ export morans_I, local_morans_I,
     end
 
 
-    # Global Moran's I 
+    # Global RPC
     function RPC(
         x::AbstractMatrix;
         weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),
@@ -254,7 +254,7 @@ export morans_I, local_morans_I,
 
 
 
-    # Global Moran's I 
+    # Local RPC 
     function RPC_local(
         x::AbstractMatrix;
         weight_function = (Δi, Δj) -> (Δi == Δj ? 1 : 0),

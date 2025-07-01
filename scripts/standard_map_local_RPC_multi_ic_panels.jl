@@ -20,10 +20,38 @@ include("../RPMotifs.jl")
 using ..RPMotifs
 
 
+function custom_recurrence_plot(data::Matrix{Float64}, epsilon::Float64; periodic::Bool=false, period::Float64=2π)
+    N, D = size(data)
+    RP = falses(N, N)  # preallocate recurrence matrix
+
+    for i in 1:N
+        for j in i:N  # symmetric, only compute upper triangle
+            if periodic
+                d = 0.0
+                for k in 1:D
+                    delta = abs(data[i, k] - data[j, k])
+                    md = mod(delta, period)
+                    mindist = min(md, period - md)
+                    d += mindist^2
+                end
+                d = sqrt(d)
+            else
+                d = sqrt(sum((data[i, :] .- data[j, :]).^2))
+            end
+
+            RP[i, j] = d ≤ epsilon
+            RP[j, i] = RP[i, j]  # symmetry
+        end
+    end
+
+    return RP
+end
+
+
 
 function main()
     # Parameters
-    eps = 1.0 # Recurrence threshold
+    eps =  0.5 # Recurrence threshold
     
     # Output directories
     data_path = "/home/gabrielm/projects/RPMotifs/data/orbits_standard_map_k=2.5_x0_y0/orbits/"
