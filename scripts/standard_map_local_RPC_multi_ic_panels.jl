@@ -46,7 +46,7 @@ function main()
     
     # --- Panel Plot Setup ---
     di_range = 1:4
-    dj_range = -4:0#1:4#
+    dj_range = -1:4#1:4#
     
     # Calculate grid size for the plot layout
     n_rows = length(dj_range)

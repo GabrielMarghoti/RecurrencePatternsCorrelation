@@ -24,7 +24,7 @@ circ = Shape(Plots.partialcircle(0, 2π))
 function main()
     # Parameters
     rr = 0.01
-    Nf = 2000
+    Nf = 6000
     dt = 0.02
 
     # --- MODIFIED ---: Make time_shifts match a max lag for autocorrelation
