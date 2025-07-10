@@ -55,7 +55,7 @@ function main()
     
     # Output directories
     data_path = "/home/gabrielm/projects/RPMotifs/data/orbits_standard_map_k=2.5_x0_y0/orbits/"
-    figures_path = "figures/orbits_standard_map_k=2.5_multi_IC/eps$(eps)/date_$(today())_PANEL" # New folder for panel plot
+    figures_path = "figures/orbits_standard_map_k=2.5_multi_IC/eps$(eps)/date_$(today())_PANEL_clean" # New folder for panel plot
 
     mkpath(figures_path)
     
@@ -85,9 +85,9 @@ function main()
 
     # Initialize the panel plot with the correct layout
     # The `layout` grid respects the order of plotting commands
-    panel_plot = plot(layout = grid(n_rows, n_cols, widths=[fill(0.634/(n_cols-1), n_cols-1)..., 0.366]), 
-                      size = (220 * n_cols, 180 * n_rows), # Start size, may need tuning
-                      dpi = 200,
+    panel_plot = plot(layout = grid(n_rows, n_cols, widths=[fill(1.0/(n_cols), n_cols)...]), 
+                      size = (200 * n_cols, 190 * n_rows), # Start size, may need tuning
+                      dpi = 300,
                       link = :both,
                       framestyle = :box,
                     top_margin = 2Plots.mm, 
@@ -137,10 +137,10 @@ function main()
 
             # Axes and Ticks
             # Show xticks and xlabel only on the bottom row
-            show_xticks = is_bottom ? ([0, π, 2π], [L"0", L"π", L"2π"]) : ([], [])
+            show_xticks = is_bottom ? ([0, π, 2π], [L"0", L"π", L"2π"]) : ([0, π, 2π], ["", "", ""])
             show_xlabel = is_bottom ? L"x" : ""
             # Show yticks and ylabel only on the leftmost column
-            show_yticks = is_leftmost ? ([0, π, 2π], [L"0", L"π", L"2π"]) : ([], [])
+            show_yticks = is_leftmost ? ([0, π, 2π], [L"0", L"π", L"2π"]) : ([0, π, 2π], ["", "", ""])
             show_ylabel = is_leftmost ? L"y" : ""
 
             # Colorbar: show only on the rightmost column plots
@@ -156,8 +156,8 @@ function main()
                     markershape=circ,
                     strokewidth=0,
                     markerstrokealpha=0, 
-                    ms = 0.8,
-                    alpha = 0.8,
+                    ms = 0.5,
+                    alpha = 0.9,
                 )
             end
 
@@ -167,21 +167,27 @@ function main()
                 ylabel = show_ylabel,
                 xticks = show_xticks,
                 yticks = show_yticks,
-                colorbar = show_colorbar,
-                colorbar_title = show_colorbar ? " lRPC " : "",
+                colorbar = false, #show_colorbar,
+                #colorbar_title = show_colorbar ? " lRPC " : "",
                 clims = (-1.0, 1.0),
-                top_margin = is_top ? 2Plots.mm : 0Plots.mm, # Make panels touch
-                bottom_margin = is_bottom ? -2Plots.mm : 0Plots.mm, # Make panels touch
-                widen = false
+                aspect_ratio = 1,
+                framestyle = :box,
+                #right_margin = 0Plots.mm,
+                left_margin = is_leftmost ? 2Plots.mm : -8Plots.mm,
+               # top_margin = 0Plots.mm, #is_top ? 2Plots.mm : 0Plots.mm, # Make panels touch
+                bottom_margin =  is_bottom ? 0Plots.mm : -8Plots.mm, # Make panels touch
+                widen = false,
+                xlims = (-0.02, 2π+0.02),
+                ylims = (-0.02, 2π+0.02),
             )
             
             # Add annotation for the motif
             # The coordinates for annotate! are relative to the subplot axes
-            label = panel_labels[p_idx]
+            #label = panel_labels[p_idx]
 
-            annotate!(panel_plot, subplot=p_idx, 
-                      0.0 * 2π, 1.05 * 2π, # position in top-left corner
-                      text(label * L" \ w_{Δi, Δj} = δ_{Δi, %$di} δ_{Δj, %$dj}", :left, 8, :black))
+            #annotate!(panel_plot, subplot=p_idx, 
+            #          0.0 * 2π, 1.05 * 2π, # position in top-left corner
+            #          text(label * L" \ w_{Δi, Δj} = δ_{Δi, %$di} δ_{Δj, %$dj}", :left, 8, :black))
             
             p_idx += 1
         end
@@ -191,7 +197,7 @@ function main()
     # --- Save the final panel plot ---
     final_figure_path = joinpath(figures_path, "standard_map_panel_plot_eps$(eps)_$(di_range[1])_$(di_range[end])_$(dj_range[1])_$(dj_range[end])")
     println("Saving final panel plot to $(final_figure_path)...")
-    savefig(panel_plot, final_figure_path * ".png")
+    #savefig(panel_plot, final_figure_path * ".png")
     savefig(panel_plot, final_figure_path * ".svg")
 #savefig(panel_plot, final_figure_path * ".pdf")
 
