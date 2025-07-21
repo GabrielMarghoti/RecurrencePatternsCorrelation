@@ -362,13 +362,13 @@ end
             lw = 0.9,
             ylims=(-0.1,1.02)
         )
-        scatter!([0.8; 0.8; 0.8], [0.85; 0.70; 0.55], mc=colors[1:3], ms=5,
+        scatter!([0.8; 0.8; 0.8], [0.82; 0.66; 0.50], mc=colors[1:3], ms=5,
                 marker = [checkerboard_marker([0 1 0; 1 0 1; 0 1 0]; marker_size=5), checkerboard_marker([0 0 1; 0 0 0; 1 0 0]; marker_size=5), checkerboard_marker([1 0 0; 0 0 0; 0 0 1]; marker_size=5)]
         )
-        annotate!(0.7, 0.95, text(L"w_{\Delta i, \Delta j}", :black, :left, 10, "Computer Modern"))
-        annotate!(1, 0.85, text("Sides", :black, :left, 10, "Computer Modern"))
-        annotate!(1, 0.70, text("Diagonal", :red, :left, 10, "Computer Modern"))
-        annotate!(1, 0.55, text("Anti-diagonal", :blue, :left, 10, "Computer Modern"))
+        annotate!(0.7, 0.94, text(L"\textbf{w}_{\Delta i, \Delta j}", :black, :left, 12, "Computer Modern"))
+        annotate!(1, 0.82, text("Sides", :black, :left, 12, "Computer Modern"))
+        annotate!(1, 0.66, text("Diagonal", :red, :left, 12, "Computer Modern"))
+        annotate!(1, 0.50, text("Anti-diagonal", :blue, :left, 12, "Computer Modern"))
         savefig(plt, joinpath(save_path, filename))
     end
     

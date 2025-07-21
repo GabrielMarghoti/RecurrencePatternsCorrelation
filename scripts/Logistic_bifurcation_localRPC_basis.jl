@@ -15,7 +15,7 @@ using ..PlotRPMotifs
 include("../RPMotifs.jl")
 using ..RPMotifs
 
-gr() 
+pythonplot() 
 default(fontfamily="Computer Modern", linewidth=2, label=nothing, grid=false, framestyle=:box)
 circ = Shape(Plots.partialcircle(0, 2π))
 
@@ -50,7 +50,7 @@ function main()
     n_rows = length(dj_range)
 
     num_panels = n_rows
-    panel_labels = map(i -> "($(string('a' + i - 1)))", 1:min(num_panels, 26))
+    panel_labels = map(i -> "($(string('a' + i - 1)))", 1:min(num_panels, 26))  # [L"(a)"; L"(b)"; L"(c)"; L"(d)"; L"(e)"; L"(f)"; L"(g)"] #
 
 
     RPC = zeros(Nf, r_resol, n_rows) 
@@ -107,20 +107,22 @@ function main()
             clims = (-1.0, 1.0),
             ylims=(-0.01,1.01),
             top_margin = row_idx==1 ? 0Plots.mm : -5Plots.mm, # Make panels touch
-            right_margin = 4Plots.mm, # Make panels touch
+            bottom_margin = row_idx==n_rows ? -4Plots.mm : 0Plots.mm, # Make panels touch
+            right_margin = 4Plots.mm,
+            left_margin = -2Plots.mm,
             widen = false
         )
         
 
         annotate!(panel_plot, subplot=row_idx, 
                     3, 0.2, # position in top-left corner
-                    text(panel_labels[row_idx] * L" \ w_{Δi, Δj} = δ_{Δi, %$di} δ_{Δj, %$dj}", :left, 10, :black))
+                    text(panel_labels[row_idx] * L" \ w_{Δi, Δj} = δ_{Δi, %$di} δ_{Δj, %$dj}", :left, 10, :black, "Computer Modern"))
         
     end
 
     savefig(joinpath(figures_path, "bifurcation_diagram_panels"*".png"))
-    savefig(joinpath(figures_path, "bifurcation_diagram_panels"*".svg"))
-    savefig(joinpath(figures_path, "bifurcation_diagram_panels"*".pdf"))
+   # savefig(joinpath(figures_path, "bifurcation_diagram_panels"*".svg"))
+   # savefig(joinpath(figures_path, "bifurcation_diagram_panels"*".pdf"))
 end
 
 

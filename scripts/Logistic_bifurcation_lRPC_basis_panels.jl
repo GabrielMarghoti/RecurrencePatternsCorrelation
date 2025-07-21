@@ -51,7 +51,7 @@ function main()
     n_rows = length(dj_range)
 
     num_panels = n_rows*n_cols
-    panel_labels = map(i -> "($(string('a' + i - 1)))", 1:(num_panels))
+    panel_labels = map(i -> L"($(string('a' + i - 1)))", 1:(num_panels))
 
 
     lRPC = zeros(Nf, r_resol, n_cols, n_rows) 

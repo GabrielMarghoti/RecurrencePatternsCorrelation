@@ -100,7 +100,7 @@ function main()
     di_dj_tuples =[(1, 1), (2, 2), (1, 0), (2, 0)]#, (0, 4), (4, -4), (4, 4)] 
 
     len_RPC = length(di_dj_tuples)
-    didj_labels = [L" w_{\Delta i, \Delta j}=\delta _{\Delta i,%$(shift[1])} \delta_{\Delta j, %$(shift[2])}" for shift in di_dj_tuples]
+    didj_labels = [L" \textbf{w}_{\Delta i, \Delta j}=\delta _{\Delta i,%$(shift[1])} \delta_{\Delta j, %$(shift[2])}" for shift in di_dj_tuples]
     
     RPC = zeros(length(systems), rr_resol, len_RPC) # Initialize RPC array
 
