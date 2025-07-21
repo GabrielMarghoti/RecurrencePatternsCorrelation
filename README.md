@@ -1,21 +1,22 @@
 # Recurrence Patterns Correlation (RPC)
 
-**Recurrence Patterns Correlation (RPC)** is a novel analysis method for uncovering underlying structures within Recurrence Plots (RPs). This repository introduces a new measure for analyzing recurrence patterns by applying **Moran's I**, a spatial autocorrelation metric, to binary 2D grid plots derived from time series data.
+**Recurrence Pattern Correlation (RPC)** is a novel method designed to bridge the gap between qualitative Recurrence Plot (RP) inspection and traditional quantitative measures. While Recurrence Quantification Analysis (RQA) typically relies on global metrics like line-based statistics, RPC introduces a spatial-statistics-inspired approach that captures localized and system-specific structures in RPs.
 
 ## Overview
 
-Recurrence Plots (RPs) are a powerful tool for visualizing and analyzing the dynamics of time series. The RPC method enhances the interpretability of these plots by quantifying spatial correlation within the RP structure.
+Recurrence Plots (RPs) are powerful tools for visualizing the dynamics of time series. However, conventional RQA may overlook localized or scale-dependent features. RPC addresses this by measuring the correlation of an RP to patterns of arbitrary shape and scale using a spatial autocorrelation metric derived from **Moran's I**.
 
-By leveraging **Moran's I**, this approach provides a quantitative measure of the spatial dependencies present in recurrence patterns—offering deeper insight into the temporal structure and complexity of the original time series.
+This approach enables the detection and quantification of long-range, structured correlations in RPs—revealing hidden dynamics such as the unstable manifolds of periodic orbits. Applications include visualizing bifurcations in the Logistic map, characterizing the mixed phase space in the Standard map, and tracking unstable periodic orbits in the Lorenz '63 system.
 
 ## Key Features
 
-* ✅ Applies **Moran’s I** to binary recurrence plots
-* 📊 Quantifies spatial correlation in 2D time series representations
-* 🔍 Enhances analysis of dynamic systems through use defined structural insights
+* ✅ Introduces a novel pattern-based quantifier inspired by **Moran’s I**
+* 📊 Captures localized and long-range spatial correlations in binary recurrence plots
+* 🔍 Detects system-specific structures across arbitrary shapes, scales, and time lags
 
 ## Use Cases
 
-* Time series structure analysis
-* Nonlinear dynamical system exploration
-* Complexity and periodicity detection in data
+* Visualizing unstable manifolds in nonlinear dynamical systems
+* Dissecting phase space complexity in mixed or chaotic regimes
+* Tracking periodic orbits and structure formation in RPs
+* Augmenting traditional RQA with more flexible, pattern-sensitive analysis
