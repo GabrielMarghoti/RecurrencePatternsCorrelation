@@ -4,7 +4,7 @@
 
 ## Overview
 
-Recurrence Plots (RPs) are powerful tools for visualizing the dynamics of time series. However, conventional RQA may overlook localized or scale-dependent features. RPC addresses this by measuring the correlation of an RP to patterns of arbitrary shape and scale using a spatial autocorrelation metric derived from **Moran's I** \[1].
+Recurrence Plots (RPs) are powerful tools for visualizing the dynamics of time series. However, conventional RQA may overlook localized or scale-dependent features. RPC addresses this by measuring the correlation of an RP to patterns of arbitrary shape and scale using a spatial autocorrelation metric derived from **Moran's I** \[3].
 
 This approach enables the detection and quantification of long-range, structured correlations in RPs—revealing hidden dynamics such as the unstable manifolds of periodic orbits. Applications include visualizing bifurcations in the Logistic map, characterizing the mixed phase space in the Standard map, and tracking unstable periodic orbits in the Lorenz '63 system.
 
