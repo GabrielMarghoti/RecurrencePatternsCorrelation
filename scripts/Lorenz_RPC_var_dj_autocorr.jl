@@ -98,7 +98,7 @@ function main()
     panel_labels = map(i -> "($(string('a' + i - 1)))", 1:min(n_local_lags+2, 26)) # --- MODIFIED --- Increased index for new panel.
 
     # Output directories
-    data_path    = "/home/gabrielm/projects/RPMotifs/data/lorenz_Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_autocorr_time_shift$(time_shifts[end])_$(length(time_shifts))/"
+    data_path    = "data/lorenz_Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_autocorr_time_shift$(time_shifts[end])_$(length(time_shifts))/"
     figures_path = "figures/lorenz_RPC_x_time_shift_$(today())/Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_autocorr_time_shift$(time_shifts[end])_$(length(time_shifts))/"
 
     mkpath(data_path)

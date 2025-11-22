@@ -21,7 +21,8 @@ export plot,
        plot_quantifier_histogram,
        save_histograms,
        save_patterns_histograms,
-       checkerboard_marker
+       checkerboard_marker,
+       rpc_vs_serie_size
 
 function checkerboard_marker(binary_matrix::AbstractMatrix{<:Number}; marker_size::Real=1.0)
     # Get the dimensions of the checkerboard grid
@@ -355,6 +356,7 @@ end
             xlabel="", ylabel="RPC",
             title=title,
             bar_width=0.14, size=(600, 300), dpi=300,
+            strokecolor = color_bars_plot,
             color=color_bars_plot, xticks=(1:num_systems, system_names),
             frame_style=:box, grid=false,
             bottom_margin = 2mm,
@@ -362,14 +364,46 @@ end
             lw = 0.9,
             ylims=(-0.1,1.02)
         )
-        scatter!([0.8; 0.8; 0.8], [0.82; 0.66; 0.50], mc=colors[1:3], ms=5,
+        scatter!([0.8; 0.8; 0.8], [0.87; 0.72; 0.56], mc=colors[1:3], ms=5,
                 marker = [checkerboard_marker([0 1 0; 1 0 1; 0 1 0]; marker_size=5), checkerboard_marker([0 0 1; 0 0 0; 1 0 0]; marker_size=5), checkerboard_marker([1 0 0; 0 0 0; 0 0 1]; marker_size=5)]
         )
-        annotate!(0.7, 0.94, text(L"\textbf{w}_{\Delta i, \Delta j}", :black, :left, 12, "Computer Modern"))
-        annotate!(1, 0.82, text("Sides", :black, :left, 12, "Computer Modern"))
-        annotate!(1, 0.66, text("Diagonal", :red, :left, 12, "Computer Modern"))
-        annotate!(1, 0.50, text("Anti-diagonal", :blue, :left, 12, "Computer Modern"))
+        annotate!(0.7, 0.96, text(L"\textbf{w}_{\Delta i, \Delta j}", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.87, text("Sides", :black, :left, 10, "Computer Modern"))
+        annotate!(1, 0.72, text("Diagonal", :red, :left, 10, "Computer Modern"))
+        annotate!(1, 0.56, text("Anti-diagonal", :blue, :left, 10, "Computer Modern"))
         savefig(plt, joinpath(save_path, filename))
     end
     
+
+
+
+
+    function rpc_vs_serie_size(Nfs, data_mean, data_std, systems, title, save_path, filename)
+        
+        if !isdir(save_path)
+            mkdir(save_path)
+        end
+    
+        num_systems = length(systems)
+
+        system_names = [system[1] for system in systems]
+
+        
+        plt = plot(
+            Nfs, reshape(data_mean, (length(Nfs), num_systems)),
+             ribbon = reshape(data_std/2, (length(Nfs), num_systems)),
+             lw = 2,
+             label = reshape(system_names, (1, num_systems)),
+            xlabel="N", ylabel="RPC (Sides motif)",
+            title=title,
+            frame_style=:box, grid=false,
+            size=(600, 300), dpi=300,
+            bottom_margin=1mm,
+            left_margin=1mm,
+            legend = :top,
+        )
+
+        savefig(plt, joinpath(save_path, filename))
+    end
+
 end # module

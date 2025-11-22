@@ -27,12 +27,12 @@ function main()
     
     rr = 0.01
 
-    Nf = 10000
+    Nf = 14000
     
     dt = 0.02
 
 
-    time_shifts = 0:1:240
+    time_shifts = 0:1:160
     tshifts_len = length(time_shifts)
 
     # Define the dictionary: Int → Vector of (Float64, String)
@@ -90,8 +90,8 @@ function main()
         "T_2" => :red,
         "T_3" => :cyan,
         "T_4" => :orange,
-        "T_5" => :purple,
-        "T_6" => :yellow2,
+        #"T_5" => :purple,
+        #"T_6" => :yellow2,
     )
 
 
@@ -107,7 +107,7 @@ function main()
     panel_labels = map(i -> "($(string('a' + i - 1)))", 1:min(n_local_lags+1, 26))
     # Output directories
     
-    data_path    = "/home/gabrielm/projects/RPMotifs/data/lorenz_Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_x_time_shift$(time_shifts[end])_$(length(time_shifts))/"
+    data_path    = "data/lorenz_Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_x_time_shift$(time_shifts[end])_$(length(time_shifts))/"
     figures_path = "figures/lorenz_RPC_x_time_shift_$(today())/Nf$(Nf)_rr$(rr)_dt$(dt)_RPC_x_time_shift$(time_shifts[end])_$(length(time_shifts))/"
 
     mkpath(data_path)
@@ -129,7 +129,7 @@ function main()
 
     lRPC = Dict{String, Vector{Float64}}()
 
-    if  false # isfile(save_path)
+    if false #isfile(save_path)
         @load save_path RPC lRPC
     else
         Threads.@threads for dj_idx = 1:tshifts_len
@@ -173,7 +173,7 @@ function main()
     # 3. Create the TOP plot (Subplot 1)
     plot!(panel_plot, subplot=1,
           time_shifts * dt, RPC, # Data
-          lc = :black, lw = 2, # Line style
+          lc = :black, lw = 2.5, # Line style
           xlabel = L"\Delta t", ylabel = "Correlation", # Axes labels
           label="RPC",
           title = "(a) Motif "*L"w_{\Delta i, \Delta j} = \delta_{\Delta i, 0} \delta_{\Delta j, \Delta t/ dt}",
@@ -183,12 +183,12 @@ function main()
         bottom_margin = -2Plots.mm, 
           legend = :topright, # Add legend
           framestyle = :box,
-          ylims=(-0.05, 0.35),
+          ylims=(-0.02, 0.24),
     )
         # Activate the right Y-axis and plot autocorrelation
     plot!(panel_plot, subplot=1,
           time_shifts * dt, ac,
-          label = "Autocorrelation", lc = :gray, ls = :dash, lw = 2.5,
+          label = "Autocorrelation", lc = :gray, ls = :solid, lw = 2.,
           
     )
     # Add vertical lines for UPO periods to the top plot
@@ -197,7 +197,7 @@ function main()
         for k in period_times
             vline!(panel_plot, subplot=1, [k[1]],
                 label = "", # Keep legend clean, labels are visual
-                ls = :dot, lw=1.6, lc = color, alpha = 0.8)
+                ls = :dot, lw=2, lc = color, alpha = 0.8)
         end
     end
 
@@ -230,10 +230,10 @@ function main()
         
         # Create the scatter plot for the current bottom panel
         scatter!(panel_plot, subplot = p_idx,
-            time_series[400:end-400, 1], time_series[400:end-400, 3], # Data
-            marker_z = lRPC[p_j_name][400:end-400], # Color data
+            time_series[200:end-200, 1], time_series[200:end-200, 3], # Data
+            marker_z = lRPC[p_j_name][200:end-200], # Color data
             color = color_grad, # Styling
-            ms = 1.0, alpha = 0.9, strokewidth = 0, markershape = circ,
+            ms = 1.0, alpha = 0.95, strokewidth = 0, markershape = circ,
             markerstrokealpha = 0, # No stroke
             xlabel = has_xlabel[p_idx-1] ? L"x" : "",
             ylabel = has_ylabel[p_idx-1] ? L"z" : "", # Axes
