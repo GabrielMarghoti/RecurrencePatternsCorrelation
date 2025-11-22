@@ -11,8 +11,8 @@ This approach enables the detection and quantification of long-range, structured
 ## Key Features
 
 * ✅ Introduces a novel pattern-based quantifier inspired by **Moran’s I** \[3]
-* 📊 Captures localized and long-range spatial correlations in binary recurrence plots
-* 🔍 Detects system-specific structures across arbitrary shapes, scales, and time lags
+* 📊 Captures localized and long-range temporal correlations from binary recurrence plots
+* 🔍 Detects system-specific structures across arbitrary shapes and scales, which are related to combinations of the recurrence relation of distinct time lags tuples
 
 ## Use Cases
 
